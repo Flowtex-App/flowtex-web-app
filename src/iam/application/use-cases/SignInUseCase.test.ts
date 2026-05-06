@@ -1,0 +1,46 @@
+import { describe, it, expect, vi } from 'vitest';
+import { SignInUseCase } from './SignInUseCase';
+import { User } from '../../domain/models/User';
+import type { IAuthRepository } from '../../domain/ports/IAuthRepository';
+import type { ITokenStorage } from '../../domain/ports/ITokenStorage';
+
+/**
+ * Caso de uso testeado en aislamiento total: los ports están mockeados,
+ * sin necesidad de HTTP, navegador, ni framework de UI. Esto es lo que
+ * hexagonal habilita.
+ */
+describe('SignInUseCase', () => {
+  it('autentica con credenciales válidas y persiste el token', async () => {
+    const fakeUser = new User({ id: 1, username: 'jane', email: 'j@x.com', role: 'user' });
+
+    const authRepository: IAuthRepository = {
+      signIn: vi.fn().mockResolvedValue({ user: fakeUser, token: 'tok-123' }),
+      signUp: vi.fn(),
+      signOut: vi.fn(),
+    };
+    const tokenStorage: ITokenStorage = {
+      save: vi.fn(),
+      read: vi.fn(),
+      clear: vi.fn(),
+    };
+
+    const useCase = new SignInUseCase(authRepository, tokenStorage);
+    const user = await useCase.execute({ username: 'jane', password: 'secret123' });
+
+    expect(user).toBe(fakeUser);
+    expect(tokenStorage.save).toHaveBeenCalledWith('tok-123');
+  });
+
+  it('rechaza credenciales vacías antes de tocar el repositorio', async () => {
+    const authRepository: IAuthRepository = {
+      signIn: vi.fn(),
+      signUp: vi.fn(),
+      signOut: vi.fn(),
+    };
+    const tokenStorage: ITokenStorage = { save: vi.fn(), read: vi.fn(), clear: vi.fn() };
+    const useCase = new SignInUseCase(authRepository, tokenStorage);
+
+    await expect(useCase.execute({ username: '', password: 'x' })).rejects.toThrow();
+    expect(authRepository.signIn).not.toHaveBeenCalled();
+  });
+});
