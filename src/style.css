@@ -1,10 +1,172 @@
 @import "tailwindcss";
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap");
+
+@theme {
+  --color-ink: #0a0a14;
+  --color-paper: #f7f5ee;
+  --color-cream: #efece1;
+  --color-flame: #ff5b1f;
+  --color-flame-soft: #ffb38f;
+  --color-citron: #d6f24a;
+  --color-mint: #45b69c;
+  --color-violet: #5b21b6;
+  --color-blush: #ffd6cc;
+  --color-iron: #1f1f2e;
+  --color-mist: #d8d6cc;
+
+  --font-display: "Space Grotesk", system-ui, sans-serif;
+  --font-sans: "Inter", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, monospace;
+
+  --shadow-brutal: 6px 6px 0 0 var(--color-ink);
+  --shadow-brutal-sm: 3px 3px 0 0 var(--color-ink);
+  --shadow-brutal-lg: 10px 10px 0 0 var(--color-ink);
+}
 
 html, body, #root {
   height: 100%;
   margin: 0;
 }
 
+body {
+  background: var(--color-paper);
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+  font-feature-settings: "ss01", "cv11";
+  -webkit-font-smoothing: antialiased;
+}
+
 * {
   box-sizing: border-box;
+}
+
+::selection {
+  background: var(--color-citron);
+  color: var(--color-ink);
+}
+
+/* Brutalist building blocks - reusable utility classes */
+@layer components {
+  .ftx-card {
+    background: var(--color-paper);
+    border: 3px solid var(--color-ink);
+    box-shadow: var(--shadow-brutal);
+    border-radius: 0;
+  }
+
+  .ftx-card-cream {
+    background: var(--color-cream);
+    border: 3px solid var(--color-ink);
+    box-shadow: var(--shadow-brutal);
+  }
+
+  .ftx-input {
+    width: 100%;
+    background: var(--color-paper);
+    border: 3px solid var(--color-ink);
+    padding: 0.65rem 0.9rem;
+    font-family: var(--font-sans);
+    font-size: 0.95rem;
+    color: var(--color-ink);
+    transition: transform 80ms ease, box-shadow 80ms ease;
+  }
+
+  .ftx-input:focus {
+    outline: none;
+    transform: translate(-2px, -2px);
+    box-shadow: var(--shadow-brutal-sm);
+  }
+
+  .ftx-input::placeholder {
+    color: #76746a;
+  }
+
+  .ftx-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    padding: 0.7rem 1.1rem;
+    font-family: var(--font-display);
+    font-weight: 600;
+    font-size: 0.95rem;
+    letter-spacing: 0.02em;
+    border: 3px solid var(--color-ink);
+    background: var(--color-paper);
+    color: var(--color-ink);
+    cursor: pointer;
+    transition: transform 80ms ease, box-shadow 80ms ease;
+    box-shadow: var(--shadow-brutal-sm);
+  }
+
+  .ftx-btn:hover:not(:disabled) {
+    transform: translate(-2px, -2px);
+    box-shadow: var(--shadow-brutal);
+  }
+
+  .ftx-btn:active:not(:disabled) {
+    transform: translate(0, 0);
+    box-shadow: 0 0 0 0 var(--color-ink);
+  }
+
+  .ftx-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  .ftx-btn-primary {
+    background: var(--color-flame);
+    color: var(--color-paper);
+  }
+
+  .ftx-btn-citron {
+    background: var(--color-citron);
+    color: var(--color-ink);
+  }
+
+  .ftx-btn-ink {
+    background: var(--color-ink);
+    color: var(--color-paper);
+  }
+
+  .ftx-btn-ghost {
+    background: transparent;
+    box-shadow: none;
+    border-color: transparent;
+  }
+
+  .ftx-tag {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.2rem 0.55rem;
+    font-family: var(--font-mono);
+    font-size: 0.72rem;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    border: 2px solid var(--color-ink);
+    background: var(--color-paper);
+  }
+
+  .ftx-tag-flame   { background: var(--color-flame); color: var(--color-paper); }
+  .ftx-tag-citron  { background: var(--color-citron); }
+  .ftx-tag-mint    { background: var(--color-mint); color: var(--color-paper); }
+  .ftx-tag-violet  { background: var(--color-violet); color: var(--color-paper); }
+  .ftx-tag-blush   { background: var(--color-blush); }
+
+  .ftx-grid-bg {
+    background-image:
+      linear-gradient(var(--color-mist) 1px, transparent 1px),
+      linear-gradient(90deg, var(--color-mist) 1px, transparent 1px);
+    background-size: 24px 24px;
+  }
+
+  .ftx-stripe {
+    background-image: repeating-linear-gradient(
+      45deg,
+      var(--color-ink),
+      var(--color-ink) 6px,
+      var(--color-citron) 6px,
+      var(--color-citron) 12px
+    );
+  }
 }

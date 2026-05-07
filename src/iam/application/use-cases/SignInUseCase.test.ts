@@ -4,19 +4,21 @@ import { User } from '../../domain/models/User';
 import type { IAuthRepository } from '../../domain/ports/IAuthRepository';
 import type { ITokenStorage } from '../../domain/ports/ITokenStorage';
 
-/**
- * Caso de uso testeado en aislamiento total: los ports están mockeados,
- * sin necesidad de HTTP, navegador, ni framework de UI. Esto es lo que
- * hexagonal habilita.
- */
 describe('SignInUseCase', () => {
-  it('autentica con credenciales válidas y persiste el token', async () => {
-    const fakeUser = new User({ id: 1, username: 'jane', email: 'j@x.com', role: 'user' });
+  it('autentica con credenciales validas y persiste el token', async () => {
+    const fakeUser = new User({
+      id: 1,
+      username: 'jane',
+      email: 'j@x.com',
+      fullName: 'Jane Doe',
+      roles: ['ROLE_USER'],
+    });
 
     const authRepository: IAuthRepository = {
       signIn: vi.fn().mockResolvedValue({ user: fakeUser, token: 'tok-123' }),
       signUp: vi.fn(),
       signOut: vi.fn(),
+      fetchCurrentUser: vi.fn(),
     };
     const tokenStorage: ITokenStorage = {
       save: vi.fn(),
@@ -31,11 +33,12 @@ describe('SignInUseCase', () => {
     expect(tokenStorage.save).toHaveBeenCalledWith('tok-123');
   });
 
-  it('rechaza credenciales vacías antes de tocar el repositorio', async () => {
+  it('rechaza credenciales vacias antes de tocar el repositorio', async () => {
     const authRepository: IAuthRepository = {
       signIn: vi.fn(),
       signUp: vi.fn(),
       signOut: vi.fn(),
+      fetchCurrentUser: vi.fn(),
     };
     const tokenStorage: ITokenStorage = { save: vi.fn(), read: vi.fn(), clear: vi.fn() };
     const useCase = new SignInUseCase(authRepository, tokenStorage);
