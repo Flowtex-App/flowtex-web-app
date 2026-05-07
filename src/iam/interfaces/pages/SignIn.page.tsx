@@ -1,9 +1,8 @@
 import { useState, type FormEvent } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { ArrowRight, Sparkles } from 'lucide-react';
+import { ArrowRight, Layers, Lock, User as UserIcon } from 'lucide-react';
 import { useAuthStore } from '../stores/auth.store';
 import { Button } from '@/shared/ui/components/Button';
-import { TextField } from '@/shared/ui/components/Field';
 
 export default function SignInPage() {
   const [username, setUsername] = useState('demo');
@@ -17,115 +16,139 @@ export default function SignInPage() {
       await signIn(username, password);
       navigate('/dashboard');
     } catch {
-      // error en el store
+      // error en store
     }
   };
 
   return (
-    <div className="min-h-screen ftx-grid-bg flex flex-col">
-      <div className="flex-1 grid lg:grid-cols-[1.1fr_1fr] max-w-[1400px] mx-auto w-full">
-        {/* Brand panel */}
-        <div className="hidden lg:flex flex-col justify-between p-12 relative overflow-hidden border-r-[3px] border-ink">
-          <div className="flex items-center gap-3">
-            <div className="size-12 bg-flame border-[3px] border-ink shadow-[4px_4px_0_0_var(--color-ink)] flex items-center justify-center">
-              <Sparkles size={22} strokeWidth={2.5} className="text-paper" />
+    <div className="min-h-screen grid lg:grid-cols-[1.1fr_1fr] bg-bg">
+      <div className="hidden lg:flex flex-col justify-between p-12 relative overflow-hidden bg-nav text-white">
+        <div className="absolute inset-0 opacity-10 ftx-grid-bg" />
+        <div className="absolute top-0 left-0 w-full h-1.5 bg-brand" />
+
+        <div className="flex items-center gap-3 relative">
+          <div className="size-11 bg-brand rounded grid place-items-center shadow-lg shadow-brand/40">
+            <Layers size={20} className="text-white" />
+          </div>
+          <div>
+            <div className="font-display font-extrabold text-2xl tracking-tight">FLOWTEX</div>
+            <div className="text-xs uppercase tracking-widest text-white/60">Form Operations Platform</div>
+          </div>
+        </div>
+
+        <div className="relative">
+          <h1 className="font-display font-extrabold text-5xl xl:text-6xl leading-[1.05] tracking-tight">
+            Disena, valida y publica
+            <br />
+            tus formularios sin esperar
+            <br />
+            <span className="text-brand">a un proveedor externo.</span>
+          </h1>
+          <p className="mt-6 text-lg text-white/70 max-w-md">
+            Plataforma interna de gestion de formularios y flujos de aprobacion
+            para el area de Tecnologia de Claro Peru. Operada por Hitss Peru.
+          </p>
+
+          <div className="mt-10 grid grid-cols-3 gap-3">
+            <Stat label="Formularios" value="6" hint="activos" />
+            <Stat label="Migracion" value="42%" hint="oleada 3" />
+            <Stat label="Uptime" value="99.7%" hint="30 dias" />
+          </div>
+        </div>
+
+        <div className="text-xs text-white/40 flex items-center gap-3 relative">
+          <span>Hitss Peru / Claro Peru</span>
+          <span className="size-1 rounded-full bg-white/30" />
+          <span>ISO 12207 / 27001</span>
+        </div>
+      </div>
+
+      <div className="flex items-center justify-center p-6 sm:p-12 bg-surface">
+        <form onSubmit={onSubmit} className="w-full max-w-md space-y-5">
+          <div className="lg:hidden flex items-center gap-2 mb-6">
+            <div className="size-9 bg-brand rounded grid place-items-center">
+              <Layers size={16} className="text-white" />
             </div>
-            <div>
-              <div className="font-display font-bold text-2xl tracking-tight">FLOWTEX</div>
-              <div className="text-xs uppercase font-mono tracking-widest text-ink/60">Form Operations Platform</div>
-            </div>
+            <span className="font-display font-extrabold tracking-tight">FLOWTEX</span>
           </div>
 
-          <div className="relative">
-            <h1 className="font-display font-bold text-6xl leading-[0.95] tracking-tight">
-              Disena{' '}
-              <span className="bg-citron px-2 inline-block border-[3px] border-ink shadow-[4px_4px_0_0_var(--color-ink)]">
-                formularios
-              </span>
-              <br />
-              con cabeza.
-            </h1>
-            <p className="mt-6 text-lg text-ink/70 max-w-md">
-              Construye, versiona y publica los flujos de Claro Peru sin escribir scripts ni esperar 6 semanas a un proveedor externo.
+          <div>
+            <span className="ftx-tag ftx-tag-brand">Acceso</span>
+            <h2 className="font-display font-bold text-3xl mt-3 text-ink">Bienvenido de vuelta</h2>
+            <p className="text-sm text-muted mt-1.5">
+              Inicia sesion con tu cuenta corporativa o usa la cuenta demo precargada.
             </p>
-
-            <div className="mt-10 grid grid-cols-3 gap-3">
-              <Stat label="Formularios" value="6" tag="activos" />
-              <Stat label="Migracion" value="42%" tag="oleada 3" />
-              <Stat label="SLA" value="99.7%" tag="uptime" />
-            </div>
           </div>
 
-          <div className="text-xs font-mono text-ink/50 flex items-center gap-3">
-            <span>Hitss Peru / Claro Peru</span>
-            <span className="size-1.5 rounded-full bg-ink/40" />
-            <span>ISO 12207 · ISO 27001</span>
-          </div>
-        </div>
-
-        {/* Form panel */}
-        <div className="flex items-center justify-center p-6 sm:p-12">
-          <form onSubmit={onSubmit} className="w-full max-w-md ftx-card p-8 space-y-5">
-            <div>
-              <span className="ftx-tag ftx-tag-blush">acceso</span>
-              <h2 className="font-display font-bold text-3xl mt-3">Iniciar sesion</h2>
-              <p className="text-sm text-ink/60 mt-1">
-                Usa tu cuenta corporativa o la cuenta demo precargada.
-              </p>
-            </div>
-
-            <TextField
-              label="Usuario"
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
-              autoComplete="username"
-              required
-            />
-
-            <TextField
-              label="Contrasena"
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              autoComplete="current-password"
-              required
-            />
-
-            {error && (
-              <div className="border-[3px] border-flame bg-blush p-3 text-sm font-medium">
-                {error}
+          <div className="space-y-4">
+            <label className="block">
+              <span className="text-xs font-semibold uppercase tracking-wider text-ink-2">Usuario</span>
+              <div className="relative mt-1.5">
+                <UserIcon size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted" />
+                <input
+                  type="text"
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value)}
+                  className="ftx-input pl-9"
+                  placeholder="usuario corporativo"
+                  autoComplete="username"
+                  required
+                />
               </div>
-            )}
+            </label>
 
-            <Button type="submit" variant="primary" size="lg" block disabled={loading}>
-              {loading ? 'Ingresando...' : 'Entrar'} <ArrowRight size={18} />
-            </Button>
+            <label className="block">
+              <span className="text-xs font-semibold uppercase tracking-wider text-ink-2">Contrasena</span>
+              <div className="relative mt-1.5">
+                <Lock size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted" />
+                <input
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className="ftx-input pl-9"
+                  autoComplete="current-password"
+                  required
+                />
+              </div>
+            </label>
+          </div>
 
-            <div className="border-t-2 border-dashed border-ink/30 pt-4 text-sm text-ink/70 flex items-center justify-between">
-              <span>Aun no tienes cuenta?</span>
-              <Link to="/sign-up" className="font-display font-semibold underline underline-offset-4 decoration-flame decoration-[3px]">
-                Crear una
-              </Link>
+          {error && (
+            <div className="bg-brand-soft border border-brand/30 text-brand-deep text-sm rounded-md p-3">
+              {error}
             </div>
+          )}
 
-            <div className="ftx-card-cream p-3 text-xs font-mono leading-relaxed">
-              <div className="font-bold uppercase tracking-wider mb-1">Demo</div>
-              <div>usuario: <code className="bg-paper px-1">demo</code></div>
-              <div>password: <code className="bg-paper px-1">Flowtex2026!</code></div>
+          <Button type="submit" variant="primary" size="lg" block disabled={loading}>
+            {loading ? 'Ingresando...' : 'Iniciar sesion'} <ArrowRight size={16} />
+          </Button>
+
+          <div className="text-sm text-muted flex items-center justify-between pt-2">
+            <span>No tienes cuenta?</span>
+            <Link to="/sign-up" className="font-semibold text-brand hover:text-brand-dark">
+              Crear una nueva
+            </Link>
+          </div>
+
+          <div className="rounded-md bg-surface-2 border border-line p-3 text-xs text-ink-2 leading-relaxed">
+            <div className="font-semibold text-ink mb-1 flex items-center gap-1.5">
+              <span className="size-1.5 rounded-full bg-success" /> Cuenta demo
             </div>
-          </form>
-        </div>
+            <div>usuario: <code className="bg-white px-1.5 py-0.5 rounded text-brand-deep border border-line">demo</code></div>
+            <div className="mt-0.5">password: <code className="bg-white px-1.5 py-0.5 rounded text-brand-deep border border-line">Flowtex2026!</code></div>
+          </div>
+        </form>
       </div>
     </div>
   );
 }
 
-function Stat({ label, value, tag }: { label: string; value: string; tag: string }) {
+function Stat({ label, value, hint }: { label: string; value: string; hint: string }) {
   return (
-    <div className="ftx-card-cream p-3">
-      <div className="text-[10px] font-mono uppercase tracking-wider text-ink/60">{label}</div>
-      <div className="font-display font-bold text-2xl">{value}</div>
-      <div className="text-xs text-ink/70">{tag}</div>
+    <div className="bg-white/5 border border-white/10 rounded-md p-3">
+      <div className="text-[10px] uppercase tracking-wider text-white/50">{label}</div>
+      <div className="font-display font-bold text-2xl mt-1 text-white">{value}</div>
+      <div className="text-xs text-white/60">{hint}</div>
     </div>
   );
 }

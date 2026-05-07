@@ -1,33 +1,58 @@
-import { Plus } from 'lucide-react';
-import { FIELD_TYPES, FIELD_TYPE_META, type FieldType } from '../../domain/models/FieldType';
+import { useDraggable } from '@dnd-kit/core';
+import { GripVertical } from 'lucide-react';
+import { FIELD_GROUPS, FIELD_TYPE_META, FIELD_TYPES, type FieldType } from '../../domain/models/FieldType';
 
-interface Props {
-  onAdd: (type: FieldType) => void;
+export const PALETTE_DRAG_PREFIX = 'palette:';
+
+interface PaletteItemProps {
+  type: FieldType;
 }
 
-export function FieldPalette({ onAdd }: Props) {
+function PaletteItem({ type }: PaletteItemProps) {
+  const meta = FIELD_TYPE_META[type];
+  const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
+    id: `${PALETTE_DRAG_PREFIX}${type}`,
+    data: { source: 'palette', fieldType: type },
+  });
+
   return (
-    <div className="ftx-card-cream p-5">
-      <span className="ftx-tag">paleta</span>
-      <h3 className="font-display font-bold text-lg mt-2 mb-3">Anadir campo</h3>
-      <div className="grid grid-cols-2 gap-2">
-        {FIELD_TYPES.map((type) => {
-          const meta = FIELD_TYPE_META[type];
-          return (
-            <button
-              key={type}
-              onClick={() => onAdd(type)}
-              className="ftx-btn ftx-btn-ghost border-2 border-ink/40 hover:border-ink hover:bg-paper hover:shadow-[3px_3px_0_0_var(--color-ink)] text-left flex items-center gap-2 px-2.5 py-2 text-sm"
-            >
-              <span className="size-7 bg-paper border-2 border-ink flex items-center justify-center text-xs font-mono">
-                {meta.emoji}
-              </span>
-              <span className="flex-1 truncate">{meta.label}</span>
-              <Plus size={14} className="opacity-50" />
-            </button>
-          );
-        })}
+    <div
+      ref={setNodeRef}
+      {...listeners}
+      {...attributes}
+      className={[
+        'ftx-palette-item flex items-center gap-2.5 group',
+        isDragging ? 'opacity-30' : '',
+      ].join(' ')}
+    >
+      <div className="size-8 shrink-0 rounded-md bg-brand-tint border border-brand/20 grid place-items-center text-brand-deep font-semibold">
+        {meta.glyph}
       </div>
+      <div className="flex-1 min-w-0">
+        <div className="text-sm font-medium text-ink truncate">{meta.label}</div>
+        <div className="text-[11px] text-muted truncate">{meta.description}</div>
+      </div>
+      <GripVertical size={14} className="text-line-strong opacity-0 group-hover:opacity-100 transition-opacity" />
+    </div>
+  );
+}
+
+export function FieldPalette() {
+  return (
+    <div className="space-y-5">
+      {FIELD_GROUPS.map((group) => {
+        const types = FIELD_TYPES.filter((t) => FIELD_TYPE_META[t].group === group.id);
+        return (
+          <div key={group.id}>
+            <div className="text-[10px] font-semibold uppercase tracking-wider text-muted mb-2 px-1">
+              {group.label}
+            </div>
+            <div className="space-y-1.5">
+              {types.map((t) => <PaletteItem key={t} type={t} />)}
+            </div>
+          </div>
+        );
+      })}
     </div>
   );
 }

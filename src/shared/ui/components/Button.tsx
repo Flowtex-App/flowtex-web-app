@@ -1,6 +1,6 @@
 import { type ButtonHTMLAttributes, type ReactNode } from 'react';
 
-type Variant = 'default' | 'primary' | 'citron' | 'ink' | 'ghost';
+type Variant = 'default' | 'primary' | 'ghost' | 'danger';
 type Size = 'sm' | 'md' | 'lg';
 
 interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
@@ -13,15 +13,14 @@ interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
 const variantClass: Record<Variant, string> = {
   default: 'ftx-btn',
   primary: 'ftx-btn ftx-btn-primary',
-  citron: 'ftx-btn ftx-btn-citron',
-  ink: 'ftx-btn ftx-btn-ink',
   ghost: 'ftx-btn ftx-btn-ghost',
+  danger: 'ftx-btn ftx-btn-danger',
 };
 
 const sizeClass: Record<Size, string> = {
-  sm: 'text-sm py-1.5 px-3',
+  sm: 'text-xs py-1.5 px-3',
   md: '',
-  lg: 'text-base py-3 px-5',
+  lg: 'text-base py-2.5 px-5',
 };
 
 export function Button({

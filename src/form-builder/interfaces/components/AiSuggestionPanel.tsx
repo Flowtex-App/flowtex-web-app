@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Sparkles, Plus, RefreshCw } from 'lucide-react';
+import { Sparkles, Plus, RefreshCw, X } from 'lucide-react';
 import { Button } from '@/shared/ui/components/Button';
 import { useFormsStore } from '../stores/forms.store';
 import { FormField, slugifyFieldKey } from '../../domain/models/FormField';
@@ -38,67 +38,81 @@ export function AiSuggestionPanel({ formTitle, formContext, existingKeys, onPick
     );
   };
 
+  const close = () => {
+    clearSuggestions();
+    setOpen(false);
+  };
+
   return (
-    <div className="ftx-card-cream p-5 relative overflow-hidden">
-      <div className="absolute -top-2 -right-2 size-16 ftx-stripe opacity-30 rotate-12" />
-      <div className="flex items-start justify-between gap-2">
-        <div>
-          <span className="ftx-tag ftx-tag-violet">ai</span>
-          <h3 className="font-display font-bold text-lg mt-2">Sugerencias inteligentes</h3>
-          <p className="text-xs text-ink/60 mt-0.5">Genero campos a partir del contexto.</p>
+    <div className="ftx-card overflow-hidden">
+      <div className="px-4 py-3 border-b border-line bg-gradient-to-r from-brand-tint to-white flex items-center gap-2">
+        <div className="size-7 rounded bg-brand grid place-items-center text-white">
+          <Sparkles size={14} />
         </div>
-        <button
-          onClick={onSuggest}
-          disabled={suggesting}
-          className="ftx-btn ftx-btn-ink size-10 p-0 disabled:opacity-50"
-          title="Generar sugerencias"
-        >
-          {suggesting ? <RefreshCw size={16} className="animate-spin" /> : <Sparkles size={16} />}
-        </button>
+        <div className="flex-1">
+          <div className="text-sm font-semibold text-ink">Asistente IA</div>
+          <div className="text-[11px] text-muted">Sugiere campos a partir de tu contexto</div>
+        </div>
+        {open && (
+          <button onClick={close} className="ftx-btn ftx-btn-ghost p-1.5" aria-label="Cerrar">
+            <X size={14} />
+          </button>
+        )}
       </div>
 
-      {!open && (
-        <Button onClick={onSuggest} size="sm" variant="primary" className="mt-3 w-full" disabled={suggesting}>
-          {suggesting ? 'Pensando...' : 'Generar campos con IA'}
-        </Button>
-      )}
+      <div className="p-4">
+        {!open ? (
+          <Button onClick={onSuggest} variant="primary" size="sm" block disabled={suggesting} icon={<Sparkles size={14} />}>
+            {suggesting ? 'Pensando...' : 'Generar campos con IA'}
+          </Button>
+        ) : (
+          <>
+            <div className="flex items-center gap-2 mb-3">
+              <Button onClick={onSuggest} size="sm" variant="primary" disabled={suggesting} icon={suggesting ? <RefreshCw size={14} className="animate-spin" /> : <Sparkles size={14} />}>
+                {suggesting ? 'Generando...' : 'Regenerar'}
+              </Button>
+              <span className="text-xs text-muted">{suggestions.length} sugerencias</span>
+            </div>
 
-      {suggestionError && (
-        <div className="mt-3 border-2 border-flame bg-blush p-2 text-xs">{suggestionError}</div>
-      )}
-
-      {open && suggestions.length > 0 && (
-        <div className="mt-4 space-y-2 max-h-80 overflow-y-auto pr-1">
-          {suggestions.map((s, i) => (
-            <button
-              key={`${s.fieldKey}-${i}`}
-              onClick={() => pickSuggestion(s)}
-              className="w-full text-left ftx-card p-3 hover:bg-citron transition-colors"
-            >
-              <div className="flex items-center justify-between">
-                <span className="font-display font-semibold text-sm">{s.label}</span>
-                <span className="ftx-tag text-[10px]">{s.fieldType}</span>
+            {suggestionError && (
+              <div className="bg-brand-soft border border-brand/30 text-brand-deep text-xs rounded p-2 mb-3">
+                {suggestionError}
               </div>
-              <code className="text-[10px] font-mono text-ink/60 block mt-0.5">{s.fieldKey}</code>
-              {s.rationale && (
-                <p className="text-xs text-ink/70 mt-1.5 leading-relaxed">{s.rationale}</p>
+            )}
+
+            <div className="space-y-2 max-h-[420px] overflow-y-auto pr-0.5">
+              {suggestions.map((s, i) => {
+                const exists = existingKeys.has(slugifyFieldKey(s.fieldKey));
+                return (
+                  <button
+                    key={`${s.fieldKey}-${i}`}
+                    onClick={() => pickSuggestion(s)}
+                    className="w-full text-left ftx-canvas-field p-3 hover:border-brand transition-colors group"
+                  >
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="font-medium text-sm text-ink truncate">{s.label}</span>
+                      <span className="ftx-tag ftx-tag-muted text-[10px]">{s.fieldType}</span>
+                    </div>
+                    <code className="text-[10px] font-mono text-muted block mt-0.5">{s.fieldKey}</code>
+                    {s.rationale && (
+                      <p className="text-xs text-ink-2 mt-1.5 leading-snug">{s.rationale}</p>
+                    )}
+                    <div className="mt-2 text-[10px] uppercase font-semibold text-brand flex items-center gap-1">
+                      <Plus size={10} /> {exists ? 'Anadir copia' : 'Anadir al formulario'}
+                    </div>
+                  </button>
+                );
+              })}
+
+              {!suggesting && suggestions.length === 0 && !suggestionError && (
+                <div className="text-center text-muted text-sm py-6">
+                  Sin sugerencias todavia. Pulsa "Regenerar".
+                </div>
               )}
-              <div className="mt-2 text-[10px] font-mono uppercase text-flame flex items-center gap-1 font-semibold">
-                <Plus size={10} /> Anadir al formulario
-              </div>
-            </button>
-          ))}
-          <button
-            onClick={() => {
-              clearSuggestions();
-              setOpen(false);
-            }}
-            className="w-full text-xs text-ink/50 underline mt-2"
-          >
-            Cerrar sugerencias
-          </button>
-        </div>
-      )}
+            </div>
+          </>
+        )}
+      </div>
     </div>
   );
 }
