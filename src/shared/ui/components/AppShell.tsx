@@ -2,170 +2,222 @@ import { type ReactNode, useState } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import {
   LogOut, Inbox, FileSpreadsheet, Search, BarChart3, FolderKanban,
-  GitBranch, Users, ListChecks, ChevronDown, Bell, Menu, X, Layers,
+  GitBranch, Users, ListChecks, ChevronDown, ChevronRight, Bell, Menu, X, Layers,
 } from 'lucide-react';
 import { useAuthStore } from '@/iam/interfaces/stores/auth.store';
+import { ThemeMenu } from '@/shared/ui/theme/ThemeMenu';
 
 interface AppShellProps {
   children: ReactNode;
-  /** When true, content area is `h-[calc(100vh-3rem)]` and clips overflow internally. */
+  /** When true, content area fills the viewport and clips overflow internally. */
   fitViewport?: boolean;
 }
 
-interface NavItem {
+interface NavLeaf {
   to: string;
   label: string;
-  icon: ReactNode;
-  exact?: boolean;
-  children?: { to: string; label: string }[];
+  icon?: ReactNode;
+  end?: boolean;
 }
 
-const navItems: NavItem[] = [
-  { to: '/dashboard', label: 'Mi Bandeja', icon: <Inbox size={15} />, exact: true },
-  { to: '/forms?status=ALL', label: 'Registro de Solicitudes', icon: <FileSpreadsheet size={15} /> },
-  { to: '/forms?search=true', label: 'Consulta de Solicitudes', icon: <Search size={15} /> },
-  { to: '/dashboard#reports', label: 'Reporte de formularios', icon: <BarChart3 size={15} /> },
+interface NavGroup {
+  id: string;
+  title: string;
+  items: NavLeaf[];
+}
+
+const navGroups: NavGroup[] = [
   {
-    to: '/forms', label: 'Gestion de formularios', icon: <FolderKanban size={15} />,
-    children: [
-      { to: '/forms', label: 'Biblioteca' },
-      { to: '/forms/new', label: 'Creador de formularios' },
+    id: 'bandejas',
+    title: 'Bandejas',
+    items: [
+      { to: '/dashboard',           label: 'Mi cola',          icon: <Inbox size={14} />,           end: true },
+      { to: '/forms?status=ALL',    label: 'Solicitudes',      icon: <FileSpreadsheet size={14} /> },
+      { to: '/forms?search=true',   label: 'Buscar',           icon: <Search size={14} /> },
     ],
   },
-  { to: '/workflows', label: 'Gestion de Workflows', icon: <GitBranch size={15} /> },
-  { to: '/groups', label: 'Gestion de grupos', icon: <Users size={15} /> },
-  { to: '/reports', label: 'Reporte de Solicitudes', icon: <BarChart3 size={15} /> },
-  { to: '/orders', label: 'Seguimiento de Ordenes', icon: <ListChecks size={15} /> },
+  {
+    id: 'diseno',
+    title: 'Diseño',
+    items: [
+      { to: '/forms',     label: 'Formularios',  icon: <FolderKanban size={14} /> },
+      { to: '/forms/new', label: 'Nuevo form',   icon: <FileSpreadsheet size={14} /> },
+      { to: '/workflows', label: 'Workflows',    icon: <GitBranch size={14} /> },
+    ],
+  },
+  {
+    id: 'gestion',
+    title: 'Gestión',
+    items: [
+      { to: '/groups',  label: 'Grupos',                icon: <Users size={14} /> },
+      { to: '/reports', label: 'Reportes',              icon: <BarChart3 size={14} /> },
+      { to: '/orders',  label: 'Seguimiento órdenes',   icon: <ListChecks size={14} /> },
+    ],
+  },
 ];
 
 export function AppShell({ children, fitViewport = false }: AppShellProps) {
   const { user, signOut } = useAuthStore();
   const navigate = useNavigate();
   const [mobileOpen, setMobileOpen] = useState(false);
-  const [openGroup, setOpenGroup] = useState<string | null>('Gestion de formularios');
+  const [collapsedGroups, setCollapsedGroups] = useState<Record<string, boolean>>({});
 
   const onSignOut = async () => {
     await signOut();
     navigate('/sign-in');
   };
 
+  const toggleGroup = (id: string) =>
+    setCollapsedGroups((prev) => ({ ...prev, [id]: !prev[id] }));
+
   return (
-    <div className="h-screen bg-bg flex overflow-hidden">
+    <div className="h-screen flex overflow-hidden" style={{ background: 'var(--ftx-bg)' }}>
       {/* Sidebar */}
       <aside
         className={[
-          'fixed lg:static inset-y-0 left-0 z-40 w-60 flex flex-col transition-transform',
-          'bg-deep text-white border-r-2 border-ink',
+          'fixed lg:static inset-y-0 left-0 z-40 w-64 flex flex-col transition-transform',
           mobileOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0',
         ].join(' ')}
+        style={{
+          background: 'var(--ftx-paper)',
+          borderRight: '1px solid var(--ftx-line)',
+        }}
       >
-        <div className="h-12 px-4 flex items-center gap-2 border-b border-white/10">
-          <div className="size-7 bg-brand rounded grid place-items-center border border-ink">
+        {/* Brand */}
+        <div
+          className="h-12 px-4 flex items-center gap-2.5 shrink-0"
+          style={{ borderBottom: '1px solid var(--ftx-line)' }}
+        >
+          <div
+            className="size-7 rounded grid place-items-center"
+            style={{ background: 'var(--ftx-brand)' }}
+          >
             <Layers size={14} className="text-white" />
           </div>
           <div className="leading-tight">
-            <div className="font-display font-extrabold text-sm tracking-tight">FLOWTEX</div>
-            <div className="text-[9px] uppercase tracking-widest opacity-60">FormBuilder</div>
+            <div className="font-display font-extrabold text-[14px] tracking-tight text-ink">
+              FLOWTEX
+            </div>
+            <div className="text-[9px] font-mono uppercase tracking-[0.2em] text-muted">
+              hitss / claro
+            </div>
           </div>
           <button
             onClick={() => setMobileOpen(false)}
-            className="ml-auto lg:hidden text-white/70 hover:text-white"
+            className="ml-auto lg:hidden ftx-icon-btn"
             aria-label="Cerrar menu"
           >
-            <X size={16} />
+            <X size={14} />
           </button>
         </div>
 
-        <nav className="flex-1 overflow-y-auto py-1.5">
-          {navItems.map((item) => (
-            item.children ? (
-              <div key={item.label}>
+        {/* Nav groups */}
+        <nav className="flex-1 overflow-y-auto py-1 text-ink-2">
+          {navGroups.map((group) => {
+            const isCollapsed = !!collapsedGroups[group.id];
+            return (
+              <div key={group.id} className="pb-1">
                 <button
-                  onClick={() => setOpenGroup(openGroup === item.label ? null : item.label)}
-                  className="ftx-sidebar-link w-full justify-between"
+                  onClick={() => toggleGroup(group.id)}
+                  className="w-full flex items-center justify-between ftx-nav-section-title hover:text-ink"
                 >
-                  <span className="flex items-center gap-2.5">{item.icon}<span>{item.label}</span></span>
-                  <ChevronDown size={12} className={`transition-transform ${openGroup === item.label ? 'rotate-180' : ''}`} />
+                  <span>{group.title}</span>
+                  {isCollapsed ? <ChevronRight size={10} /> : <ChevronDown size={10} />}
                 </button>
-                {openGroup === item.label && (
-                  <div className="bg-black/20">
-                    {item.children.map((child) => (
+                {!isCollapsed && (
+                  <div className="space-y-0">
+                    {group.items.map((item) => (
                       <NavLink
-                        key={child.to}
-                        to={child.to}
+                        key={item.to + item.label}
+                        to={item.to}
+                        end={item.end}
                         onClick={() => setMobileOpen(false)}
-                        className={({ isActive }) =>
-                          `ftx-sidebar-link pl-11 text-[12px] ${isActive ? 'active' : ''}`
-                        }
+                        className={({ isActive }) => `ftx-nav-link ${isActive ? 'active' : ''}`}
                       >
-                        {child.label}
+                        <span className="nav-icon">{item.icon}</span>
+                        <span>{item.label}</span>
                       </NavLink>
                     ))}
                   </div>
                 )}
               </div>
-            ) : (
-              <NavLink
-                key={item.to}
-                to={item.to}
-                end={item.exact}
-                onClick={() => setMobileOpen(false)}
-                className={({ isActive }) => `ftx-sidebar-link ${isActive ? 'active' : ''}`}
-              >
-                {item.icon}<span>{item.label}</span>
-              </NavLink>
-            )
-          ))}
+            );
+          })}
         </nav>
 
-        <div className="px-4 py-2.5 border-t border-white/10 text-[10px] text-white/45 leading-relaxed">
-          <div className="font-mono">v0.1.0</div>
-          <div>Hitss Peru / Claro Peru</div>
+        {/* Footer */}
+        <div
+          className="px-4 py-2.5 text-[10px] text-muted leading-relaxed"
+          style={{ borderTop: '1px solid var(--ftx-line)' }}
+        >
+          <div className="font-mono">v0.2.0</div>
+          <div>Hitss Perú · Claro Perú</div>
         </div>
       </aside>
 
       {mobileOpen && (
-        <div className="fixed inset-0 bg-black/40 z-30 lg:hidden" onClick={() => setMobileOpen(false)} />
+        <div
+          className="fixed inset-0 z-30 lg:hidden"
+          style={{ background: 'rgba(0,0,0,0.4)' }}
+          onClick={() => setMobileOpen(false)}
+        />
       )}
 
+      {/* Main column */}
       <div className="flex-1 flex flex-col min-w-0">
-        <header className="h-12 bg-deep text-white flex items-center justify-between px-4 lg:px-5 border-b-2 border-ink shrink-0">
+        <header
+          className="h-12 flex items-center justify-between px-4 lg:px-5 shrink-0"
+          style={{
+            background: 'var(--ftx-paper)',
+            borderBottom: '1px solid var(--ftx-line)',
+          }}
+        >
           <div className="flex items-center gap-3">
             <button
               onClick={() => setMobileOpen(!mobileOpen)}
-              className="lg:hidden text-white/80 hover:text-white"
+              className="lg:hidden ftx-icon-btn"
               aria-label="Abrir menu"
             >
-              <Menu size={18} />
+              <Menu size={16} />
             </button>
-            <div className="hidden md:flex items-center gap-2 text-[11px] opacity-70">
-              <span>App 241</span>
-              <span className="opacity-30">/</span>
-              <span>Sesion activa</span>
+            <div className="hidden md:flex items-center gap-2 text-[11px] text-muted font-mono">
+              <span>app.241</span>
+              <span style={{ color: 'var(--ftx-line-strong)' }}>/</span>
+              <span style={{ color: 'var(--ftx-success)' }}>● activo</span>
             </div>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1.5">
+            <ThemeMenu />
+
             <button
-              className="size-8 grid place-items-center text-white/80 hover:bg-white/10 rounded transition-colors"
+              className="ftx-icon-btn"
               aria-label="Notificaciones"
+              title="Notificaciones"
             >
-              <Bell size={16} />
+              <Bell size={14} />
             </button>
+
             {user && (
-              <div className="flex items-center gap-2 pl-2.5 border-l border-white/15">
-                <div className="size-7 bg-brand rounded grid place-items-center border border-ink font-display font-bold text-[10px] text-white">
+              <div
+                className="flex items-center gap-2 pl-2.5 ml-1"
+                style={{ borderLeft: '1px solid var(--ftx-line)' }}
+              >
+                <div
+                  className="size-7 rounded grid place-items-center font-display font-bold text-[10px] text-white"
+                  style={{ background: 'var(--ftx-brand)' }}
+                >
                   {user.initials()}
                 </div>
                 <div className="hidden md:block leading-tight text-right">
-                  <div className="text-[11px] font-medium">{user.fullName}</div>
-                  <div className="text-[9px] text-white/55">@{user.username}</div>
+                  <div className="text-[12px] font-medium text-ink">{user.fullName}</div>
+                  <div className="text-[10px] text-muted font-mono">@{user.username}</div>
                 </div>
                 <button
                   onClick={onSignOut}
-                  className="size-7 grid place-items-center text-white/70 hover:text-white hover:bg-white/10 rounded transition-colors"
-                  aria-label="Cerrar sesion"
-                  title="Cerrar sesion"
+                  className="ftx-icon-btn"
+                  aria-label="Cerrar sesión"
+                  title="Cerrar sesión"
                 >
                   <LogOut size={13} />
                 </button>

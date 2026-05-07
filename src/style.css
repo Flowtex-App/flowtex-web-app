@@ -1,78 +1,233 @@
 @import "tailwindcss";
-@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Manrope:wght@600;700;800&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Manrope:wght@600;700;800&family=JetBrains+Mono:wght@400;500;600&family=Instrument+Serif:ital@0;1&display=swap");
 
+/* ─── Base palette referenced from CSS vars (set by data-theme on <html>) ─── */
 @theme {
-  --color-brand:        #DA291C;
-  --color-brand-dark:   #A8160C;
-  --color-brand-deep:   #7E0F08;
-  --color-brand-soft:   #FCE7E5;
-  --color-brand-tint:   #FFF1EF;
+  --color-brand:        var(--ftx-brand);
+  --color-brand-dark:   var(--ftx-brand-dark);
+  --color-brand-deep:   var(--ftx-brand-deep);
+  --color-brand-soft:   var(--ftx-brand-soft);
+  --color-brand-tint:   var(--ftx-brand-tint);
 
-  --color-ink:          #111827;
-  --color-ink-2:        #374151;
-  --color-muted:        #6B7280;
-  --color-line:         #E5E7EB;
-  --color-line-strong:  #D1D5DB;
-  --color-bg:           #F8F8F6;
-  --color-paper:        #FFFFFF;
-  --color-cream:        #FAF7F2;
+  --color-ink:          var(--ftx-ink);
+  --color-ink-2:        var(--ftx-ink-2);
+  --color-muted:        var(--ftx-muted);
+  --color-line:         var(--ftx-line);
+  --color-line-soft:    var(--ftx-line-soft);
+  --color-line-strong:  var(--ftx-line-strong);
+  --color-bg:           var(--ftx-bg);
+  --color-paper:        var(--ftx-paper);
+  --color-cream:        var(--ftx-cream);
+  --color-canvas:       var(--ftx-canvas);
 
-  --color-deep:         #0F2A33;
+  --color-deep:         var(--ftx-deep);
+  --color-deep-2:       var(--ftx-deep-2);
+  --color-steel:        var(--ftx-steel);
 
-  --color-success:      #0D9460;
-  --color-warning:      #C97A0A;
-  --color-info:         #1F5FB8;
+  --color-success:      var(--ftx-success);
+  --color-warning:      var(--ftx-warning);
+  --color-info:         var(--ftx-info);
 
   --font-display:       "Manrope", system-ui, sans-serif;
   --font-sans:          "Inter", system-ui, sans-serif;
+  --font-mono:          "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+  --font-editorial:     "Instrument Serif", Georgia, serif;
 }
 
+/* ─── Default theme ─── */
+:root,
+[data-theme="default"] {
+  --ftx-brand:        #DA291C;
+  --ftx-brand-dark:   #A8160C;
+  --ftx-brand-deep:   #7E0F08;
+  --ftx-brand-soft:   #FCE7E5;
+  --ftx-brand-tint:   #FFF1EF;
+
+  --ftx-ink:          #111827;
+  --ftx-ink-2:        #374151;
+  --ftx-muted:        #6B7280;
+  --ftx-line:         #E5E7EB;
+  --ftx-line-soft:    #EEF0F3;
+  --ftx-line-strong:  #D1D5DB;
+  --ftx-bg:           #F4F4F0;
+  --ftx-paper:        #FFFFFF;
+  --ftx-cream:        #FAF7F2;
+  --ftx-canvas:       #F1F1ED;
+
+  --ftx-deep:         #0F2A33;
+  --ftx-deep-2:       #1A3D49;
+  --ftx-steel:        #475569;
+
+  --ftx-success:      #0D9460;
+  --ftx-warning:      #C97A0A;
+  --ftx-info:         #1F5FB8;
+}
+
+/* ─── Dark theme ─── */
+[data-theme="dark"] {
+  --ftx-brand:        #FF6A5C;
+  --ftx-brand-dark:   #E04F40;
+  --ftx-brand-deep:   #B33326;
+  --ftx-brand-soft:   #2A1816;
+  --ftx-brand-tint:   #1F1311;
+
+  --ftx-ink:          #E6E8EC;
+  --ftx-ink-2:        #B8BCC4;
+  --ftx-muted:        #7A8089;
+  --ftx-line:         #1F252D;
+  --ftx-line-soft:    #181E25;
+  --ftx-line-strong:  #2C333D;
+  --ftx-bg:           #0E1318;
+  --ftx-paper:        #131820;
+  --ftx-cream:        #1A1F27;
+  --ftx-canvas:       #0F141A;
+
+  --ftx-deep:         #0A1116;
+  --ftx-deep-2:       #131A21;
+  --ftx-steel:        #8E96A1;
+
+  --ftx-success:      #3FBA88;
+  --ftx-warning:      #E2A047;
+  --ftx-info:         #5B8BD9;
+}
+
+/* ─── High-contrast theme ─── */
+[data-theme="high-contrast"] {
+  --ftx-brand:        #B0150B;
+  --ftx-brand-dark:   #8B0E07;
+  --ftx-brand-deep:   #6E0904;
+  --ftx-brand-soft:   #FFE5E2;
+  --ftx-brand-tint:   #FFF5F4;
+
+  --ftx-ink:          #000000;
+  --ftx-ink-2:        #1A1A1A;
+  --ftx-muted:        #4A4A4A;
+  --ftx-line:         #B0B0B0;
+  --ftx-line-soft:    #D6D6D6;
+  --ftx-line-strong:  #000000;
+  --ftx-bg:           #FFFFFF;
+  --ftx-paper:        #FFFFFF;
+  --ftx-cream:        #F5F5F5;
+  --ftx-canvas:       #FAFAFA;
+
+  --ftx-deep:         #000000;
+  --ftx-deep-2:       #1A1A1A;
+  --ftx-steel:        #303030;
+
+  --ftx-success:      #006B3F;
+  --ftx-warning:      #8A4F00;
+  --ftx-info:         #003D85;
+}
+
+/* ─── Sepia theme ─── */
+[data-theme="sepia"] {
+  --ftx-brand:        #A8160C;
+  --ftx-brand-dark:   #7E0F08;
+  --ftx-brand-deep:   #5A0A05;
+  --ftx-brand-soft:   #F2D8D2;
+  --ftx-brand-tint:   #F8E5E0;
+
+  --ftx-ink:          #3B2E1E;
+  --ftx-ink-2:        #524130;
+  --ftx-muted:        #7A6747;
+  --ftx-line:         #DDC9A8;
+  --ftx-line-soft:    #E9DCC0;
+  --ftx-line-strong:  #C9B58D;
+  --ftx-bg:           #F4ECD9;
+  --ftx-paper:        #FBF6E8;
+  --ftx-cream:        #EFE3CB;
+  --ftx-canvas:       #F1E7D2;
+
+  --ftx-deep:         #2A2010;
+  --ftx-deep-2:       #3F3220;
+  --ftx-steel:        #6E5C40;
+
+  --ftx-success:      #5C7A30;
+  --ftx-warning:      #B07020;
+  --ftx-info:         #4A5F8A;
+}
+
+/* ─── Font scale ─── */
+:root,
+[data-font-scale="md"] { --ftx-base-font: 14px; }
+[data-font-scale="sm"] { --ftx-base-font: 13px; }
+[data-font-scale="lg"] { --ftx-base-font: 15px; }
+[data-font-scale="xl"] { --ftx-base-font: 17px; }
+
+html { font-size: var(--ftx-base-font); }
 html, body, #root { height: 100%; margin: 0; }
 body {
-  background: var(--color-bg);
-  color: var(--color-ink);
+  background: var(--ftx-bg);
+  color: var(--ftx-ink);
   font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
+  font-feature-settings: "ss01", "cv01", "cv11";
+  transition: background-color 200ms ease, color 200ms ease;
 }
 * { box-sizing: border-box; }
-::selection { background: var(--color-brand-soft); color: var(--color-brand-deep); }
+::selection { background: var(--ftx-brand-soft); color: var(--ftx-brand-deep); }
 
-::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar { width: 8px; height: 8px; }
 ::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: var(--color-line-strong); border: 2px solid transparent; background-clip: padding-box; border-radius: 999px; }
-::-webkit-scrollbar-thumb:hover { background: var(--color-muted); border: 2px solid transparent; background-clip: padding-box; }
+::-webkit-scrollbar-thumb { background: var(--ftx-line-strong); border: 2px solid transparent; background-clip: padding-box; border-radius: 999px; }
+::-webkit-scrollbar-thumb:hover { background: var(--ftx-muted); border: 2px solid transparent; background-clip: padding-box; }
 
 @layer components {
+  /* ---------- Cards & shells ---------- */
   .ftx-card {
-    background: var(--color-paper);
-    border: 2px solid var(--color-ink);
+    background: var(--ftx-paper);
+    border: 2px solid var(--ftx-ink);
     border-radius: 6px;
-    box-shadow: 2px 2px 0 0 var(--color-ink);
+    box-shadow: 2px 2px 0 0 var(--ftx-ink);
   }
   .ftx-card-flat {
-    background: var(--color-paper);
-    border: 1px solid var(--color-line);
+    background: var(--ftx-paper);
+    border: 1px solid var(--ftx-line);
     border-radius: 6px;
   }
+  .ftx-panel {
+    background: var(--ftx-paper);
+    border: 1px solid var(--ftx-line-strong);
+    border-radius: 4px;
+  }
 
+  /* ---------- Inputs ---------- */
   .ftx-input {
     width: 100%;
-    background: var(--color-paper);
-    border: 2px solid var(--color-line-strong);
+    background: var(--ftx-paper);
+    border: 2px solid var(--ftx-line-strong);
     border-radius: 4px;
     padding: 0.5rem 0.7rem;
     font-size: 0.875rem;
-    color: var(--color-ink);
+    color: var(--ftx-ink);
     transition: border-color 100ms ease, box-shadow 100ms ease;
   }
-  .ftx-input::placeholder { color: #9CA3AF; }
-  .ftx-input:hover { border-color: var(--color-muted); }
+  .ftx-input::placeholder { color: var(--ftx-muted); opacity: 0.7; }
+  .ftx-input:hover { border-color: var(--ftx-muted); }
   .ftx-input:focus {
     outline: none;
-    border-color: var(--color-ink);
-    box-shadow: 2px 2px 0 0 var(--color-brand);
+    border-color: var(--ftx-ink);
+    box-shadow: 2px 2px 0 0 var(--ftx-brand);
+  }
+  .ftx-input-flat {
+    width: 100%;
+    background: var(--ftx-paper);
+    border: 1px solid var(--ftx-line-strong);
+    border-radius: 3px;
+    padding: 0.4rem 0.6rem;
+    font-size: 0.8rem;
+    color: var(--ftx-ink);
+    transition: border-color 100ms ease, background 100ms ease;
+  }
+  .ftx-input-flat::placeholder { color: var(--ftx-muted); opacity: 0.6; }
+  .ftx-input-flat:hover { border-color: var(--ftx-steel); }
+  .ftx-input-flat:focus {
+    outline: none;
+    border-color: var(--ftx-ink);
+    background: var(--ftx-cream);
   }
 
+  /* ---------- Buttons ---------- */
   .ftx-btn {
     display: inline-flex;
     align-items: center;
@@ -82,32 +237,28 @@ body {
     font-family: var(--font-sans);
     font-weight: 500;
     font-size: 0.85rem;
-    border: 2px solid var(--color-ink);
+    border: 2px solid var(--ftx-ink);
     border-radius: 4px;
-    background: var(--color-paper);
-    color: var(--color-ink);
+    background: var(--ftx-paper);
+    color: var(--ftx-ink);
     cursor: pointer;
     transition: transform 80ms ease, box-shadow 80ms ease, background 80ms ease;
-    box-shadow: 2px 2px 0 0 var(--color-ink);
+    box-shadow: 2px 2px 0 0 var(--ftx-ink);
   }
   .ftx-btn:hover:not(:disabled) {
     transform: translate(-1px, -1px);
-    box-shadow: 3px 3px 0 0 var(--color-ink);
-    background: var(--color-cream);
+    box-shadow: 3px 3px 0 0 var(--ftx-ink);
+    background: var(--ftx-cream);
   }
   .ftx-btn:active:not(:disabled) {
     transform: translate(1px, 1px);
-    box-shadow: 0 0 0 0 var(--color-ink);
+    box-shadow: 0 0 0 0 var(--ftx-ink);
   }
   .ftx-btn:disabled { opacity: 0.5; cursor: not-allowed; box-shadow: none; }
 
-  .ftx-btn-primary {
-    background: var(--color-brand);
-    color: #fff;
-  }
-  .ftx-btn-primary:hover:not(:disabled) {
-    background: var(--color-brand-dark);
-  }
+  .ftx-btn-primary { background: var(--ftx-brand); color: #fff; border-color: var(--ftx-ink); }
+  [data-theme="dark"] .ftx-btn-primary { color: #0E1318; border-color: var(--ftx-brand); box-shadow: 2px 2px 0 0 var(--ftx-brand-deep); }
+  .ftx-btn-primary:hover:not(:disabled) { background: var(--ftx-brand-dark); }
 
   .ftx-btn-ghost {
     background: transparent;
@@ -115,20 +266,40 @@ body {
     box-shadow: none;
   }
   .ftx-btn-ghost:hover:not(:disabled) {
-    background: var(--color-cream);
-    border-color: var(--color-ink);
+    background: var(--ftx-cream);
+    border-color: var(--ftx-ink);
     transform: none;
-    box-shadow: 2px 2px 0 0 var(--color-ink);
+    box-shadow: 2px 2px 0 0 var(--ftx-ink);
   }
 
-  .ftx-btn-danger {
-    background: var(--color-paper);
-    color: var(--color-brand);
+  .ftx-btn-danger { background: var(--ftx-paper); color: var(--ftx-brand); }
+  .ftx-btn-danger:hover:not(:disabled) { background: var(--ftx-brand-soft); }
+
+  .ftx-icon-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.6rem;
+    height: 1.6rem;
+    border: 1px solid transparent;
+    background: transparent;
+    color: var(--ftx-muted);
+    border-radius: 3px;
+    cursor: pointer;
+    transition: background 80ms ease, color 80ms ease, border-color 80ms ease;
   }
-  .ftx-btn-danger:hover:not(:disabled) {
-    background: var(--color-brand-soft);
+  .ftx-icon-btn:hover {
+    background: var(--ftx-cream);
+    color: var(--ftx-ink);
+    border-color: var(--ftx-line-strong);
+  }
+  .ftx-icon-btn-danger:hover {
+    background: var(--ftx-brand-soft);
+    color: var(--ftx-brand);
+    border-color: var(--ftx-brand);
   }
 
+  /* ---------- Tags ---------- */
   .ftx-tag {
     display: inline-flex;
     align-items: center;
@@ -137,99 +308,471 @@ body {
     letter-spacing: 0.04em;
     text-transform: uppercase;
     font-weight: 700;
-    border: 2px solid var(--color-ink);
+    border: 2px solid var(--ftx-ink);
     border-radius: 3px;
-    background: var(--color-paper);
-    color: var(--color-ink);
+    background: var(--ftx-paper);
+    color: var(--ftx-ink);
   }
-  .ftx-tag-brand   { background: var(--color-brand); color: #fff; }
-  .ftx-tag-success { background: var(--color-success); color: #fff; }
-  .ftx-tag-warn    { background: var(--color-warning); color: #fff; }
-  .ftx-tag-info    { background: var(--color-info); color: #fff; }
-  .ftx-tag-muted   { background: var(--color-cream); color: var(--color-muted); border-color: var(--color-line-strong); }
+  .ftx-tag-brand   { background: var(--ftx-brand); color: #fff; }
+  .ftx-tag-success { background: var(--ftx-success); color: #fff; }
+  .ftx-tag-warn    { background: var(--ftx-warning); color: #fff; }
+  .ftx-tag-info    { background: var(--ftx-info); color: #fff; }
+  .ftx-tag-deep    { background: var(--ftx-deep); color: #fff; border-color: var(--ftx-deep); }
+  .ftx-tag-muted   { background: var(--ftx-cream); color: var(--ftx-muted); border-color: var(--ftx-line-strong); }
+
+  .ftx-tag-flat {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.12rem 0.4rem;
+    font-size: 0.65rem;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    font-weight: 600;
+    font-family: var(--font-mono);
+    border: 1px solid var(--ftx-line-strong);
+    border-radius: 3px;
+    background: var(--ftx-paper);
+    color: var(--ftx-ink-2);
+  }
 
   .ftx-form-header {
-    background: var(--color-brand);
+    background: var(--ftx-brand);
     color: #fff;
-    border-bottom: 2px solid var(--color-ink);
+    border-bottom: 2px solid var(--ftx-ink);
   }
 
+  /* ---------- Drop zone ---------- */
   .ftx-drop-zone {
-    border: 2px dashed var(--color-line-strong);
+    border: 2px dashed var(--ftx-line-strong);
     border-radius: 6px;
-    background: var(--color-cream);
+    background: var(--ftx-cream);
     transition: border-color 100ms ease, background 100ms ease;
   }
   .ftx-drop-zone-active {
-    border-color: var(--color-brand);
+    border-color: var(--ftx-brand);
     border-style: solid;
-    background: var(--color-brand-tint);
+    background: var(--ftx-brand-tint);
   }
 
+  /* ---------- Palette chips ---------- */
   .ftx-chip {
-    background: var(--color-paper);
-    border: 2px solid var(--color-ink);
-    border-radius: 5px;
-    padding: 0.45rem 0.35rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 0.6rem;
+    background: var(--ftx-paper);
+    border: 1px solid var(--ftx-line-strong);
+    border-left: 3px solid var(--ftx-line);
+    border-radius: 3px;
     cursor: grab;
     user-select: none;
-    transition: transform 80ms ease, box-shadow 80ms ease;
-    box-shadow: 1px 1px 0 0 var(--color-ink);
-    text-align: center;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    gap: 0.3rem;
-    min-height: 70px;
+    transition: border-color 80ms ease, background 80ms ease, transform 80ms ease;
   }
   .ftx-chip:hover {
-    transform: translate(-1px, -1px);
-    box-shadow: 2px 2px 0 0 var(--color-brand);
-    border-color: var(--color-brand);
+    border-color: var(--ftx-ink);
+    border-left-color: var(--ftx-brand);
+    background: var(--ftx-cream);
+    transform: translateX(1px);
   }
   .ftx-chip:active { cursor: grabbing; }
 
-  .ftx-canvas-field {
-    background: var(--color-paper);
-    border: 2px solid var(--color-ink);
+  .ftx-chip-glyph {
+    display: grid;
+    place-items: center;
+    width: 1.65rem;
+    height: 1.65rem;
+    background: var(--ftx-bg);
+    border: 1px solid var(--ftx-line-strong);
+    border-radius: 3px;
+    font-family: var(--font-mono);
+    font-weight: 600;
+    font-size: 0.78rem;
+    color: var(--ftx-ink);
+    flex-shrink: 0;
+  }
+
+  /* ---------- Canvas grid ---------- */
+  .ftx-canvas-shell {
+    position: relative;
+    background: var(--ftx-paper);
+    border: 1px solid var(--ftx-line-strong);
     border-radius: 5px;
-    box-shadow: 1px 1px 0 0 var(--color-ink);
+    box-shadow: 0 1px 0 0 rgba(0, 0, 0, 0.04), 0 8px 24px -16px rgba(0, 0, 0, 0.10);
+  }
+  .ftx-canvas-grid-bg {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background-image: linear-gradient(to right, var(--ftx-line-soft) 1px, transparent 1px);
+    background-size: calc(100% / 12) 100%;
+    opacity: 0.85;
+    border-radius: inherit;
+    overflow: hidden;
+  }
+  .ftx-canvas-grid-bg::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background-image: linear-gradient(to bottom, var(--ftx-line-soft) 1px, transparent 1px);
+    background-size: 100% 28px;
+    opacity: 0.7;
+  }
+  .ftx-canvas-ruler {
+    display: grid;
+    grid-template-columns: repeat(12, 1fr);
+    height: 1.4rem;
+    border-bottom: 1px dashed var(--ftx-line-strong);
+    background: var(--ftx-cream);
+    font-family: var(--font-mono);
+    font-size: 0.62rem;
+    color: var(--ftx-muted);
+    letter-spacing: 0.05em;
+  }
+  .ftx-canvas-ruler > span {
+    border-right: 1px dashed var(--ftx-line);
+    display: grid;
+    place-items: center;
+  }
+  .ftx-canvas-ruler > span:last-child { border-right: 0; }
+
+  .ftx-tile {
+    position: relative;
+    background: var(--ftx-paper);
+    border: 1px solid var(--ftx-line-strong);
+    border-radius: 4px;
     transition: box-shadow 100ms ease, border-color 100ms ease;
   }
-  .ftx-canvas-field:hover { box-shadow: 2px 2px 0 0 var(--color-ink); }
-  .ftx-canvas-field-active {
-    border-color: var(--color-brand);
-    box-shadow: 2px 2px 0 0 var(--color-brand);
+  .ftx-tile:hover {
+    border-color: var(--ftx-steel);
+    box-shadow: 0 1px 0 0 rgba(0, 0, 0, 0.06), 0 8px 16px -10px rgba(0, 0, 0, 0.12);
+  }
+  .ftx-tile-active {
+    border-color: var(--ftx-brand);
+    box-shadow: 0 0 0 1px var(--ftx-brand), 0 8px 16px -8px rgba(218, 41, 28, 0.18);
+  }
+  .ftx-tile-presentational {
+    background: var(--ftx-cream);
+    border-style: dashed;
   }
 
-  .ftx-sidebar-link {
+  .ftx-tile-toolbar {
     display: flex;
     align-items: center;
-    gap: 0.7rem;
-    padding: 0.55rem 0.95rem;
-    color: rgba(255, 255, 255, 0.75);
-    font-size: 0.85rem;
-    border-left: 3px solid transparent;
-    transition: background 100ms ease, color 100ms ease;
+    gap: 0.35rem;
+    padding: 0.3rem 0.45rem;
+    border-bottom: 1px solid var(--ftx-line-soft);
+    background: var(--ftx-bg);
+    border-radius: 4px 4px 0 0;
   }
-  .ftx-sidebar-link:hover {
-    background: rgba(255, 255, 255, 0.06);
-    color: #fff;
-  }
-  .ftx-sidebar-link.active {
-    background: rgba(0, 0, 0, 0.25);
-    color: #fff;
-    border-left-color: var(--color-brand);
+  .ftx-tile-coord {
+    font-family: var(--font-mono);
+    font-size: 0.6rem;
+    letter-spacing: 0.06em;
+    color: var(--ftx-muted);
+    background: var(--ftx-paper);
+    padding: 0.05rem 0.35rem;
+    border: 1px solid var(--ftx-line-strong);
+    border-radius: 2px;
   }
 
+  .ftx-resize-handle {
+    position: absolute;
+    top: 0;
+    right: -3px;
+    width: 6px;
+    height: 100%;
+    cursor: ew-resize;
+    z-index: 5;
+  }
+  .ftx-resize-handle::before {
+    content: "";
+    position: absolute;
+    top: 50%;
+    right: 1px;
+    transform: translateY(-50%);
+    width: 2px;
+    height: 22px;
+    background: var(--ftx-line-strong);
+    border-radius: 2px;
+    transition: background 80ms ease, height 80ms ease;
+  }
+  .ftx-tile:hover .ftx-resize-handle::before { background: var(--ftx-brand); height: 28px; }
+  .ftx-resize-handle.is-active::before { background: var(--ftx-brand); height: 36px; }
+
+  .ftx-resize-handle-v {
+    position: absolute;
+    left: 0;
+    bottom: -3px;
+    height: 6px;
+    width: 100%;
+    cursor: ns-resize;
+    z-index: 5;
+  }
+  .ftx-resize-handle-v::before {
+    content: "";
+    position: absolute;
+    left: 50%;
+    bottom: 1px;
+    transform: translateX(-50%);
+    width: 22px;
+    height: 2px;
+    background: var(--ftx-line-strong);
+    border-radius: 2px;
+    transition: background 80ms ease, width 80ms ease;
+  }
+  .ftx-tile:hover .ftx-resize-handle-v::before { background: var(--ftx-brand); width: 28px; }
+  .ftx-resize-handle-v.is-active::before { background: var(--ftx-brand); width: 36px; }
+
+  .ftx-resize-ghost {
+    position: absolute;
+    inset: 0;
+    border: 1.5px dashed var(--ftx-brand);
+    background: rgba(218, 41, 28, 0.06);
+    border-radius: 4px;
+    pointer-events: none;
+    z-index: 4;
+  }
+
+  /* ---------- Page tabs (form pages, not approval steps) ---------- */
+  .ftx-step-tab {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.45rem 0.85rem;
+    border: 1px solid transparent;
+    border-bottom: 2px solid transparent;
+    background: transparent;
+    color: var(--ftx-muted);
+    font-size: 0.78rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: color 80ms ease, background 80ms ease, border-color 80ms ease;
+  }
+  .ftx-step-tab .num {
+    font-family: var(--font-mono);
+    font-size: 0.65rem;
+    color: var(--ftx-muted);
+    letter-spacing: 0.04em;
+  }
+  .ftx-step-tab:hover { color: var(--ftx-ink); background: var(--ftx-cream); }
+  .ftx-step-tab.active {
+    color: var(--ftx-ink);
+    background: var(--ftx-paper);
+    border-color: var(--ftx-line-strong);
+    border-bottom-color: var(--ftx-brand);
+  }
+  .ftx-step-tab.active .num { color: var(--ftx-brand); }
+
+  /* ---------- Inspector ---------- */
+  .ftx-inspector-section { border-bottom: 1px solid var(--ftx-line); }
+  .ftx-inspector-title {
+    font-family: var(--font-mono);
+    font-size: 0.62rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--ftx-muted);
+    padding: 0.65rem 0.9rem 0.4rem;
+  }
+  .ftx-inspector-row {
+    display: grid;
+    grid-template-columns: 90px 1fr;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.25rem 0.9rem 0.45rem;
+  }
+  .ftx-inspector-row > label {
+    font-size: 0.72rem;
+    color: var(--ftx-ink-2);
+  }
+
+  /* ---------- New light navbar (replaces .ftx-sidebar-link) ---------- */
+  .ftx-nav-section-title {
+    font-family: var(--font-mono);
+    font-size: 0.6rem;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--ftx-muted);
+    padding: 0.7rem 1rem 0.3rem;
+  }
+  .ftx-nav-link {
+    display: flex;
+    align-items: center;
+    gap: 0.65rem;
+    padding: 0.4rem 0.95rem;
+    color: var(--ftx-ink-2);
+    font-size: 0.82rem;
+    font-weight: 400;
+    border-left: 2px solid transparent;
+    transition: background 80ms ease, color 80ms ease, border-color 80ms ease;
+    text-decoration: none;
+  }
+  .ftx-nav-link:hover {
+    background: var(--ftx-cream);
+    color: var(--ftx-ink);
+  }
+  .ftx-nav-link.active {
+    background: var(--ftx-cream);
+    color: var(--ftx-ink);
+    border-left-color: var(--ftx-brand);
+    font-weight: 500;
+  }
+  .ftx-nav-link.active .nav-icon { color: var(--ftx-brand); }
+  .nav-icon { color: var(--ftx-muted); flex-shrink: 0; }
+
+  /* ---------- Width pill (segmented) ---------- */
+  .ftx-width-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 1px;
+    padding: 2px;
+    background: var(--ftx-bg);
+    border: 1px solid var(--ftx-line-strong);
+    border-radius: 4px;
+  }
+  .ftx-width-pill button {
+    font-family: var(--font-mono);
+    font-size: 0.62rem;
+    padding: 0.18rem 0.4rem;
+    color: var(--ftx-muted);
+    border-radius: 2px;
+    background: transparent;
+    cursor: pointer;
+    transition: background 80ms ease, color 80ms ease;
+  }
+  .ftx-width-pill button:hover { color: var(--ftx-ink); background: var(--ftx-paper); }
+  .ftx-width-pill button.is-active { color: var(--ftx-paper); background: var(--ftx-ink); }
+
+  /* ---------- Approval rail / workflow rail ---------- */
+  .ftx-rail {
+    background: linear-gradient(180deg, var(--ftx-paper) 0%, var(--ftx-cream) 100%);
+    border: 1px dashed var(--ftx-line-strong);
+    border-left: 3px solid var(--ftx-info);
+    border-radius: 4px;
+  }
+  .ftx-rail-mark {
+    font-family: var(--font-mono);
+    font-size: 0.6rem;
+    letter-spacing: 0.08em;
+    color: var(--ftx-info);
+  }
+
+  /* ---------- Floating chatbot ---------- */
+  .ftx-bot-bubble {
+    position: fixed;
+    right: 1.25rem;
+    bottom: 1.25rem;
+    z-index: 60;
+    width: 3.4rem;
+    height: 3.4rem;
+    border-radius: 50%;
+    background: var(--ftx-brand);
+    color: #fff;
+    display: grid;
+    place-items: center;
+    cursor: pointer;
+    border: 2px solid var(--ftx-ink);
+    box-shadow: 4px 4px 0 0 var(--ftx-ink);
+    transition: transform 100ms ease, box-shadow 100ms ease;
+  }
+  .ftx-bot-bubble:hover {
+    transform: translate(-1px, -1px);
+    box-shadow: 5px 5px 0 0 var(--ftx-ink);
+  }
+  .ftx-bot-window {
+    position: fixed;
+    right: 1.25rem;
+    bottom: 1.25rem;
+    z-index: 60;
+    width: min(380px, calc(100vw - 2.5rem));
+    height: min(560px, calc(100vh - 5rem));
+    background: var(--ftx-paper);
+    border: 2px solid var(--ftx-ink);
+    border-radius: 8px;
+    box-shadow: 6px 6px 0 0 var(--ftx-ink);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  .ftx-bot-msg-user,
+  .ftx-bot-msg-bot {
+    max-width: 85%;
+    padding: 0.5rem 0.7rem;
+    font-size: 0.78rem;
+    line-height: 1.45;
+    border-radius: 8px;
+    word-wrap: break-word;
+  }
+  .ftx-bot-msg-user {
+    background: var(--ftx-brand);
+    color: #fff;
+    align-self: flex-end;
+    border-bottom-right-radius: 2px;
+  }
+  .ftx-bot-msg-bot {
+    background: var(--ftx-cream);
+    color: var(--ftx-ink);
+    align-self: flex-start;
+    border-bottom-left-radius: 2px;
+    border: 1px solid var(--ftx-line);
+  }
+
+  /* ---------- Stripe (decorative) ---------- */
   .ftx-stripe {
     background-image: repeating-linear-gradient(
       45deg,
-      var(--color-ink),
-      var(--color-ink) 5px,
-      var(--color-brand) 5px,
-      var(--color-brand) 10px
+      var(--ftx-ink),
+      var(--ftx-ink) 5px,
+      var(--ftx-brand) 5px,
+      var(--ftx-brand) 10px
     );
+  }
+
+  /* ---------- Workflow node hint dots + stripe handles ---------- */
+  .ftx-step-hint-dot {
+    position: absolute;
+    width: 9px;
+    height: 9px;
+    border-radius: 50%;
+    border: 2px solid var(--ftx-paper);
+    transform: translate(-50%, -50%);
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 100ms ease, transform 100ms ease;
+    z-index: 2;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.18);
+  }
+  .ftx-step-node:hover .ftx-step-hint-dot,
+  .react-flow__node.selected .ftx-step-hint-dot {
+    opacity: 1;
+  }
+
+  .ftx-stripe-handle {
+    z-index: 3;
+    transition: background 80ms ease;
+  }
+  .ftx-step-node:hover .ftx-stripe-handle {
+    background: rgba(218, 41, 28, 0.10) !important;
+  }
+  .ftx-stripe-handle:hover {
+    background: rgba(218, 41, 28, 0.28) !important;
+  }
+  .react-flow__handle-connecting.ftx-stripe-handle {
+    background: var(--ftx-brand) !important;
+    opacity: 0.45;
+  }
+  .react-flow__handle-valid.ftx-stripe-handle {
+    background: rgba(13, 148, 96, 0.40) !important;
+  }
+
+  /* React Flow connection line (the dashed line during drag) */
+  .react-flow__connection-path {
+    stroke: var(--ftx-brand);
+    stroke-width: 2;
+    stroke-dasharray: 4 3;
+  }
+  .react-flow__edge-path {
+    stroke-linecap: round;
+    stroke-linejoin: round;
   }
 }

@@ -9,6 +9,7 @@ import {
   publishFormUseCase,
   deleteFormUseCase,
   suggestFieldsUseCase,
+  formBuilderPorts,
 } from '../composition/form-builder-container';
 
 interface FormsState {
@@ -30,6 +31,8 @@ interface FormsState {
   suggestFields: (input: { formTitle: string; formContext: string; maxSuggestions?: number }) => Promise<void>;
   clearSuggestions: () => void;
   resetCurrent: () => void;
+
+  linkWorkflow: (formId: number, workflowId: number | null) => Promise<Form>;
 }
 
 export const useFormsStore = create<FormsState>((set, get) => ({
@@ -112,6 +115,17 @@ export const useFormsStore = create<FormsState>((set, get) => ({
 
   clearSuggestions: () => set({ suggestions: [], suggestionError: null }),
   resetCurrent: () => set({ current: null }),
+
+  linkWorkflow: async (formId, workflowId) => {
+    try {
+      const updated = await formBuilderPorts.formRepository.linkWorkflow(formId, workflowId);
+      set({ current: get().current?.id === formId ? updated : get().current });
+      return updated;
+    } catch (e) {
+      set({ error: msgOf(e) });
+      throw e;
+    }
+  },
 }));
 
 const msgOf = (e: unknown): string => {

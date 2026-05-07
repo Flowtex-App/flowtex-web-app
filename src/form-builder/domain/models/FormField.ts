@@ -2,6 +2,9 @@ import type { FieldType } from './FieldType';
 
 export type FieldWidth = 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12;
 
+/** Page identifier within a form (form-level wizard tabs). */
+export type PageId = string;
+
 export interface FormFieldProps {
   id?: number;
   label: string;
@@ -15,6 +18,56 @@ export interface FormFieldProps {
   options?: string | null;
 }
 
+interface EmbeddedMeta {
+  /** Page id within the form (e.g. 'p1', 'p2'). */
+  page: PageId;
+  /** Visual rows occupied by the tile (UI only). */
+  rows: number;
+}
+
+const META_PREFIX = '​__ftx:';
+const META_SUFFIX = '__';
+const META_RX = /^​__ftx:(\{.*?\})__/;
+
+const DEFAULT_PAGE: PageId = 'p1';
+const DEFAULT_META: EmbeddedMeta = { page: DEFAULT_PAGE, rows: 1 };
+
+function parseMeta(raw: string | null | undefined): { meta: EmbeddedMeta; rest: string } {
+  if (!raw) return { meta: { ...DEFAULT_META }, rest: '' };
+  const match = raw.match(META_RX);
+  if (!match) return { meta: { ...DEFAULT_META }, rest: raw };
+  try {
+    const parsed = JSON.parse(match[1]);
+    // Backwards-compat: previous version used 'step' (main / approval-1 / approval-2)
+    const pageRaw = typeof parsed.page === 'string' && parsed.page.length > 0
+      ? parsed.page
+      : (typeof parsed.step === 'string' ? mapStepToPage(parsed.step) : DEFAULT_PAGE);
+    const meta: EmbeddedMeta = {
+      page: pageRaw,
+      rows:
+        typeof parsed.rows === 'number' && parsed.rows >= 1 && parsed.rows <= 6
+          ? Math.round(parsed.rows)
+          : 1,
+    };
+    return { meta, rest: raw.slice(match[0].length) };
+  } catch {
+    return { meta: { ...DEFAULT_META }, rest: raw };
+  }
+}
+
+function mapStepToPage(step: string): PageId {
+  // Old "approval steps" don't make sense in the new model — collapse them all to p1.
+  if (step === 'approval-1' || step === 'approval-2' || step === 'main') return DEFAULT_PAGE;
+  return DEFAULT_PAGE;
+}
+
+function serializeMeta(meta: EmbeddedMeta, rest: string | null | undefined): string | null {
+  const isDefault = meta.page === DEFAULT_PAGE && meta.rows === 1;
+  const cleaned = (rest ?? '').trimStart();
+  if (isDefault) return cleaned ? cleaned : null;
+  return `${META_PREFIX}${JSON.stringify({ page: meta.page, rows: meta.rows })}${META_SUFFIX}${cleaned}`;
+}
+
 export class FormField {
   readonly id?: number;
   readonly label: string;
@@ -22,24 +75,40 @@ export class FormField {
   readonly fieldType: FieldType;
   readonly required: boolean;
   readonly placeholder: string | null;
-  readonly helpText: string | null;
   readonly position: number;
   readonly width: FieldWidth;
   readonly options: string | null;
 
+  /** Raw helpText including the embedded meta marker. Persisted as-is. */
+  readonly rawHelpText: string | null;
+  /** User-facing help text (without the meta marker). */
+  readonly helpText: string | null;
+
+  /** Page (wizard tab) the field belongs to. */
+  readonly page: PageId;
+  /** Visual rows occupied (1-6). UI-only metadata. */
+  readonly rows: number;
+
   constructor(props: FormFieldProps) {
     if (!props.label?.trim()) throw new Error('label is required');
     if (!props.fieldKey?.trim()) throw new Error('fieldKey is required');
+
+    const raw = props.helpText ?? null;
+    const { meta, rest } = parseMeta(raw);
+
     this.id = props.id;
     this.label = props.label;
     this.fieldKey = props.fieldKey;
     this.fieldType = props.fieldType;
     this.required = props.required;
     this.placeholder = props.placeholder ?? null;
-    this.helpText = props.helpText ?? null;
+    this.rawHelpText = raw;
+    this.helpText = rest ? rest : null;
     this.position = props.position;
     this.width = clampWidth(props.width ?? 12);
     this.options = props.options ?? null;
+    this.page = meta.page;
+    this.rows = meta.rows;
   }
 
   optionsList(): string[] {
@@ -52,19 +121,24 @@ export class FormField {
     }
   }
 
-  with(overrides: Partial<FormFieldProps>): FormField {
+  with(overrides: Partial<FormFieldProps & { page: PageId; rows: number }>): FormField {
+    const nextHelp = 'helpText' in overrides ? overrides.helpText ?? null : this.helpText;
+    const nextPage: PageId = overrides.page ?? this.page;
+    const nextRows = overrides.rows ?? this.rows;
+    const merged: EmbeddedMeta = { page: nextPage, rows: clampRows(nextRows) };
+    const serialized = serializeMeta(merged, nextHelp);
+
     return new FormField({
-      id: this.id,
-      label: this.label,
-      fieldKey: this.fieldKey,
-      fieldType: this.fieldType,
-      required: this.required,
-      placeholder: this.placeholder,
-      helpText: this.helpText,
-      position: this.position,
-      width: this.width,
-      options: this.options,
-      ...overrides,
+      id: 'id' in overrides ? overrides.id : this.id,
+      label: overrides.label ?? this.label,
+      fieldKey: overrides.fieldKey ?? this.fieldKey,
+      fieldType: overrides.fieldType ?? this.fieldType,
+      required: overrides.required ?? this.required,
+      placeholder: 'placeholder' in overrides ? overrides.placeholder : this.placeholder,
+      helpText: serialized,
+      position: overrides.position ?? this.position,
+      width: overrides.width ?? this.width,
+      options: 'options' in overrides ? overrides.options : this.options,
     });
   }
 }
@@ -74,6 +148,13 @@ function clampWidth(w: number): FieldWidth {
   if (n < 1) return 1;
   if (n > 12) return 12;
   return n as FieldWidth;
+}
+
+function clampRows(r: number): number {
+  const n = Math.round(r);
+  if (n < 1) return 1;
+  if (n > 6) return 6;
+  return n;
 }
 
 export const slugifyFieldKey = (label: string): string => {
@@ -112,3 +193,43 @@ export function widthClassName(width: FieldWidth): string {
   };
   return map[width] ?? map[12];
 }
+
+export interface PageDef {
+  id: PageId;
+  label: string;
+  index: number;
+}
+
+/**
+ * Compute the list of pages that exist in a form, based on the field set.
+ * Always includes 'p1'. Returns pages in the order they first appear in the
+ * field list.
+ */
+export function listPages(fields: readonly FormField[]): PageDef[] {
+  const seen: PageId[] = [];
+  for (const f of fields) {
+    if (!seen.includes(f.page)) seen.push(f.page);
+  }
+  if (seen.length === 0) seen.push(DEFAULT_PAGE);
+  if (!seen.includes(DEFAULT_PAGE)) seen.unshift(DEFAULT_PAGE);
+  return seen.map((id, index) => ({
+    id,
+    label: pageLabelFor(id, index),
+    index,
+  }));
+}
+
+export function pageLabelFor(id: PageId, index: number): string {
+  // 'p1' → "Página 1", 'p2' → "Página 2"... or use trailing digits when present
+  const m = id.match(/(\d+)$/);
+  const n = m ? Number(m[1]) : index + 1;
+  return `Página ${n}`;
+}
+
+export function nextPageId(existing: readonly PageId[]): PageId {
+  let n = existing.length + 1;
+  while (existing.includes(`p${n}`)) n++;
+  return `p${n}`;
+}
+
+export const DEFAULT_PAGE_ID: PageId = DEFAULT_PAGE;

@@ -15,4 +15,5 @@ export interface IFormRepository {
   update(id: number, draft: FormDraft): Promise<Form>;
   publish(id: number): Promise<Form>;
   remove(id: number): Promise<void>;
+  linkWorkflow(formId: number, workflowId: number | null): Promise<Form>;
 }

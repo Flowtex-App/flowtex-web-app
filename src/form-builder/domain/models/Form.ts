@@ -10,6 +10,7 @@ export interface FormProps {
   status: FormStatus;
   version: number;
   ownerId: number;
+  workflowId?: number | null;
   fields: FormField[];
   createdAt?: string | null;
   updatedAt?: string | null;
@@ -23,6 +24,7 @@ export class Form {
   readonly status: FormStatus;
   readonly version: number;
   readonly ownerId: number;
+  readonly workflowId: number | null;
   readonly fields: readonly FormField[];
   readonly createdAt: string | null;
   readonly updatedAt: string | null;
@@ -36,6 +38,7 @@ export class Form {
     this.status = props.status;
     this.version = props.version;
     this.ownerId = props.ownerId;
+    this.workflowId = props.workflowId ?? null;
     this.fields = Object.freeze([...props.fields]);
     this.createdAt = props.createdAt ?? null;
     this.updatedAt = props.updatedAt ?? null;

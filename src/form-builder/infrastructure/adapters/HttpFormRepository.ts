@@ -25,6 +25,7 @@ interface FormDto {
   status: FormStatus;
   version: number;
   ownerId: number;
+  workflowId: number | null;
   fields: FormFieldDto[];
   createdAt: string | null;
   updatedAt: string | null;
@@ -62,6 +63,7 @@ const toForm = (dto: FormDto): Form => {
     status: dto.status,
     version: dto.version,
     ownerId: dto.ownerId,
+    workflowId: dto.workflowId,
     fields,
     createdAt: dto.createdAt,
     updatedAt: dto.updatedAt,
@@ -78,7 +80,8 @@ const draftToBody = (draft: FormDraft) => ({
     fieldType: f.fieldType,
     required: f.required,
     placeholder: f.placeholder ?? '',
-    helpText: f.helpText ?? '',
+    // Persist with embedded UI metadata (step, rows) when present.
+    helpText: f.rawHelpText ?? f.helpText ?? '',
     position: idx,
     width: f.width,
     options: f.options ?? '',
@@ -115,5 +118,13 @@ export class HttpFormRepository implements IFormRepository {
 
   async remove(id: number): Promise<void> {
     await this.http.delete(`/forms/${id}`);
+  }
+
+  async linkWorkflow(formId: number, workflowId: number | null): Promise<Form> {
+    const { data } = await this.http.put<FormDto>(
+      `/forms/${formId}/workflow`,
+      { workflowId },
+    );
+    return toForm(data);
   }
 }
