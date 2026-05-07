@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import {
-  ArrowLeft, Save, Send, Eye, EyeOff, MousePointerClick,
+  ArrowLeft, Save, Send, MousePointerClick, Eye, Sparkles, Layers,
 } from 'lucide-react';
 import {
   DndContext, DragOverlay, KeyboardSensor, PointerSensor,
@@ -9,15 +9,13 @@ import {
   type DragEndEvent, type DragStartEvent,
 } from '@dnd-kit/core';
 import {
-  SortableContext, verticalListSortingStrategy, sortableKeyboardCoordinates,
-  arrayMove,
+  SortableContext, rectSortingStrategy, sortableKeyboardCoordinates, arrayMove,
 } from '@dnd-kit/sortable';
 
 import { AppShell } from '@/shared/ui/components/AppShell';
 import { Button } from '@/shared/ui/components/Button';
-import { TextField, TextAreaField } from '@/shared/ui/components/Field';
 
-import { FormField, slugifyFieldKey } from '../../domain/models/FormField';
+import { FormField, slugifyFieldKey, widthClassName, type FieldWidth } from '../../domain/models/FormField';
 import { FIELD_TYPE_META, type FieldType } from '../../domain/models/FieldType';
 import { FieldPalette, PALETTE_DRAG_PREFIX } from '../components/FieldPalette';
 import { FieldEditor } from '../components/FieldEditor';
@@ -26,18 +24,13 @@ import { AiSuggestionPanel } from '../components/AiSuggestionPanel';
 import { useFormsStore } from '../stores/forms.store';
 
 const CANVAS_DROP_ID = 'canvas-drop-zone';
+type RightTab = 'preview' | 'ai';
 
 function fieldSortableId(field: FormField, index: number): string {
   return field.id ? `field:${field.id}` : `field:tmp-${field.fieldKey}-${index}`;
 }
 
-function CanvasDroppable({
-  fields,
-  children,
-}: {
-  fields: FormField[];
-  children: React.ReactNode;
-}) {
+function CanvasDroppable({ fields, children }: { fields: FormField[]; children: React.ReactNode }) {
   const { isOver, setNodeRef } = useDroppable({ id: CANVAS_DROP_ID });
 
   if (fields.length === 0) {
@@ -45,15 +38,17 @@ function CanvasDroppable({
       <div
         ref={setNodeRef}
         className={[
-          'ftx-drop-zone py-16 px-6 text-center transition-colors',
+          'ftx-drop-zone h-full grid place-items-center px-6 transition-colors',
           isOver ? 'ftx-drop-zone-active' : '',
         ].join(' ')}
       >
-        <MousePointerClick size={28} className="mx-auto text-line-strong" />
-        <p className="text-sm text-ink-2 mt-3 font-medium">Arrastra un elemento aqui</p>
-        <p className="text-xs text-muted mt-1">
-          Toma cualquier campo del panel izquierdo y sueltalo en esta zona, o usa la IA.
-        </p>
+        <div className="text-center max-w-md">
+          <MousePointerClick size={28} className="mx-auto text-line-strong" />
+          <p className="text-sm font-medium text-ink mt-3">Suelta aqui tu primer campo</p>
+          <p className="text-xs text-muted mt-1">
+            Arrastra cualquier elemento de la paleta o pidele a la IA que sugiera campos a partir del contexto.
+          </p>
+        </div>
       </div>
     );
   }
@@ -62,7 +57,7 @@ function CanvasDroppable({
     <div
       ref={setNodeRef}
       className={[
-        'space-y-3 p-3 rounded-lg transition-colors',
+        'grid grid-cols-12 gap-2 p-2 rounded-md transition-colors min-h-full',
         isOver ? 'bg-brand-tint/40' : '',
       ].join(' ')}
     >
@@ -83,10 +78,12 @@ export default function FormBuilderPage() {
   const [description, setDescription] = useState('');
   const [context, setContext] = useState('');
   const [fields, setFields] = useState<FormField[]>([]);
-  const [showPreview, setShowPreview] = useState(true);
   const [savedNotice, setSavedNotice] = useState<string | null>(null);
   const [activeDragType, setActiveDragType] = useState<FieldType | null>(null);
   const [activeReorderId, setActiveReorderId] = useState<string | null>(null);
+  const [selectedKey, setSelectedKey] = useState<string | null>(null);
+  const [rightTab, setRightTab] = useState<RightTab>('preview');
+  const [metaOpen, setMetaOpen] = useState(true);
 
   useEffect(() => {
     if (isNew) {
@@ -109,15 +106,8 @@ export default function FormBuilderPage() {
     }
   }, [current, isNew]);
 
-  const existingKeys = useMemo(
-    () => new Set(fields.map((f) => f.fieldKey)),
-    [fields],
-  );
-
-  const sortableIds = useMemo(
-    () => fields.map((f, i) => fieldSortableId(f, i)),
-    [fields],
-  );
+  const existingKeys = useMemo(() => new Set(fields.map((f) => f.fieldKey)), [fields]);
+  const sortableIds = useMemo(() => fields.map((f, i) => fieldSortableId(f, i)), [fields]);
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
@@ -137,6 +127,7 @@ export default function FormBuilderPage() {
       fieldType: type,
       required: false,
       position: fields.length,
+      width: defaultWidthFor(type),
     });
   };
 
@@ -153,26 +144,23 @@ export default function FormBuilderPage() {
     const { active, over } = event;
     setActiveDragType(null);
     setActiveReorderId(null);
-
     if (!over) return;
 
     const activeId = String(active.id);
     const overId = String(over.id);
 
-    // From palette -> drop in canvas (or onto an existing field)
     if (activeId.startsWith(PALETTE_DRAG_PREFIX)) {
       const type = activeId.replace(PALETTE_DRAG_PREFIX, '') as FieldType;
       const next = buildField(type);
-
       const overIndex = sortableIds.indexOf(overId);
       const insertIndex = overIndex >= 0 ? overIndex + 1 : fields.length;
       const newFields = [...fields];
       newFields.splice(insertIndex, 0, next);
       setFields(newFields.map((f, i) => f.with({ position: i })));
+      setSelectedKey(next.fieldKey);
       return;
     }
 
-    // Reordering existing fields
     if (activeId !== overId) {
       const oldIndex = sortableIds.indexOf(activeId);
       const newIndex = sortableIds.indexOf(overId);
@@ -190,13 +178,15 @@ export default function FormBuilderPage() {
   };
 
   const deleteField = (index: number) => {
-    setFields(
-      fields.filter((_, i) => i !== index).map((f, i) => f.with({ position: i })),
-    );
+    const removed = fields[index];
+    setFields(fields.filter((_, i) => i !== index).map((f, i) => f.with({ position: i })));
+    if (removed && selectedKey === removed.fieldKey) setSelectedKey(null);
   };
 
   const addFieldFromAi = (field: FormField) => {
-    setFields([...fields, field.with({ position: fields.length })]);
+    const next = field.with({ position: fields.length, width: field.width ?? defaultWidthFor(field.fieldType) });
+    setFields([...fields, next]);
+    setSelectedKey(next.fieldKey);
   };
 
   const onSave = async () => {
@@ -221,161 +211,190 @@ export default function FormBuilderPage() {
   };
 
   return (
-    <AppShell>
-      <DndContext
-        sensors={sensors}
-        onDragStart={handleDragStart}
-        onDragEnd={handleDragEnd}
-      >
-        {/* Toolbar */}
-        <div className="flex items-center justify-between mb-4 gap-3 flex-wrap">
-          <button onClick={() => navigate('/forms')} className="ftx-btn ftx-btn-ghost">
-            <ArrowLeft size={15} /> Volver a la biblioteca
-          </button>
-
-          <div className="flex items-center gap-2 flex-wrap">
+    <AppShell fitViewport>
+      <DndContext sensors={sensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
+        <div className="h-full flex flex-col min-h-0">
+          {/* Top builder bar */}
+          <div className="h-12 px-4 flex items-center gap-3 border-b-2 border-ink bg-paper shrink-0">
             <button
-              onClick={() => setShowPreview(!showPreview)}
-              className="ftx-btn"
-              title={showPreview ? 'Ocultar preview' : 'Mostrar preview'}
+              onClick={() => navigate('/forms')}
+              className="ftx-btn ftx-btn-ghost text-xs py-1 px-2"
+              aria-label="Volver"
             >
-              {showPreview ? <EyeOff size={15} /> : <Eye size={15} />}
-              {showPreview ? 'Ocultar preview' : 'Mostrar preview'}
+              <ArrowLeft size={14} /> Biblioteca
             </button>
-            <Button onClick={onSave} disabled={saving} icon={<Save size={15} />}>
-              {saving ? 'Guardando...' : 'Guardar'}
-            </Button>
-            {!isNew && current?.status !== 'PUBLISHED' && (
-              <Button variant="primary" onClick={onPublish} icon={<Send size={15} />}>
-                Publicar
-              </Button>
-            )}
-          </div>
-        </div>
 
-        {/* Header */}
-        <div className="mb-5">
-          <div className="flex items-center gap-2 flex-wrap">
-            <span className="ftx-tag ftx-tag-brand">{isNew ? 'Nuevo' : 'Editar'}</span>
-            {current && !isNew && (
-              <>
-                <span className={`ftx-tag ${current.status === 'PUBLISHED' ? 'ftx-tag-success' : 'ftx-tag-warn'}`}>
-                  {current.status.toLowerCase()}
-                </span>
-                <span className="ftx-tag ftx-tag-muted">v{current.version}</span>
-              </>
-            )}
-          </div>
-          <h1 className="font-display font-extrabold text-2xl mt-2 text-ink">
-            Creador de formularios
-          </h1>
-          <p className="text-sm text-muted mt-0.5">
-            Arrastra los campos desde la paleta, ordena con grip y configura cada campo en su panel.
-          </p>
-        </div>
-
-        {error && (
-          <div className="bg-brand-soft border border-brand/30 text-brand-deep text-sm rounded-md p-3 mb-4">
-            {error}
-          </div>
-        )}
-        {savedNotice && !error && (
-          <div className="bg-success/10 border border-success/30 text-success text-sm rounded-md p-3 mb-4">
-            {savedNotice}
-          </div>
-        )}
-        {loading && !current && !isNew && <div className="text-muted">Cargando...</div>}
-
-        {/* Layout 3 cols: palette | canvas | preview/ai */}
-        <div className="grid grid-cols-1 xl:grid-cols-[280px_minmax(0,1fr)_360px] gap-5">
-          {/* Left: palette */}
-          <aside className="ftx-card p-4 h-fit xl:sticky xl:top-[5rem]">
-            <div className="mb-3">
-              <h2 className="font-display font-bold text-sm text-ink">Elementos</h2>
-              <p className="text-[11px] text-muted">Arrastra al canvas para agregar.</p>
-            </div>
-            <FieldPalette />
-          </aside>
-
-          {/* Middle: canvas */}
-          <div className="space-y-4 min-w-0">
-            <div className="ftx-card p-5 space-y-4">
-              <TextField
-                label="Titulo del formulario"
+            <div className="flex items-center gap-2 flex-1 min-w-0">
+              <span className="ftx-tag ftx-tag-brand text-[9px]">{isNew ? 'NUEVO' : 'EDITAR'}</span>
+              {current && !isNew && (
+                <>
+                  <span className={`ftx-tag text-[9px] ${current.status === 'PUBLISHED' ? 'ftx-tag-success' : 'ftx-tag-warn'}`}>
+                    {current.status.toLowerCase()}
+                  </span>
+                  <span className="ftx-tag ftx-tag-muted text-[9px]">v{current.version}</span>
+                </>
+              )}
+              <input
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
-                placeholder="Ej. Solicitud de acceso a sistemas"
-                required
-              />
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <TextField
-                  label="Descripcion corta"
-                  value={description}
-                  onChange={(e) => setDescription(e.target.value)}
-                  placeholder="Una linea explicando para que sirve"
-                />
-                <TextField
-                  label="Codigo"
-                  value={isNew ? 'auto-generado' : `FTX-${formId?.toString().padStart(4, '0')}`}
-                  disabled
-                />
-              </div>
-              <TextAreaField
-                label="Contexto detallado"
-                value={context}
-                onChange={(e) => setContext(e.target.value)}
-                placeholder="Describe el proceso, los actores y lo que el formulario necesita capturar."
-                rows={3}
-                hint="La IA usa este contexto para sugerir campos relevantes."
+                placeholder="Nombre del formulario..."
+                className="font-display font-bold text-base text-ink bg-transparent border-0 outline-none focus:bg-cream px-2 py-1 rounded flex-1 min-w-0"
               />
             </div>
 
-            <div className="flex items-center justify-between">
-              <h3 className="font-display font-bold text-sm text-ink">
-                Campos del formulario
-              </h3>
-              <span className="text-xs text-muted">{fields.length} en total</span>
+            <div className="flex items-center gap-2 shrink-0">
+              <Button onClick={onSave} disabled={saving} icon={<Save size={14} />} className="text-xs py-1.5 px-3">
+                {saving ? 'Guardando...' : 'Guardar'}
+              </Button>
+              {!isNew && current?.status !== 'PUBLISHED' && (
+                <Button variant="primary" onClick={onPublish} icon={<Send size={14} />} className="text-xs py-1.5 px-3">
+                  Publicar
+                </Button>
+              )}
             </div>
-
-            <SortableContext items={sortableIds} strategy={verticalListSortingStrategy}>
-              <CanvasDroppable fields={fields}>
-                {fields.map((field, idx) => (
-                  <FieldEditor
-                    key={fieldSortableId(field, idx)}
-                    field={field}
-                    index={idx}
-                    onChange={(next) => updateField(idx, next)}
-                    onDelete={() => deleteField(idx)}
-                  />
-                ))}
-              </CanvasDroppable>
-            </SortableContext>
           </div>
 
-          {/* Right: AI + preview */}
-          <aside className="space-y-4 min-w-0">
-            <AiSuggestionPanel
-              formTitle={title}
-              formContext={context}
-              existingKeys={existingKeys}
-              onPick={addFieldFromAi}
-            />
-            {showPreview && (
-              <FormPreview title={title} description={description} fields={fields} />
-            )}
-          </aside>
+          {/* Notices */}
+          {(error || savedNotice) && (
+            <div className="px-4 py-2 border-b border-line shrink-0">
+              {error && (
+                <div className="bg-brand-soft border-2 border-brand text-brand-deep text-xs rounded p-2 font-medium">
+                  {error}
+                </div>
+              )}
+              {savedNotice && !error && (
+                <div className="bg-success/10 border-2 border-success text-success text-xs rounded p-2 font-medium">
+                  {savedNotice}
+                </div>
+              )}
+            </div>
+          )}
+
+          {loading && !current && !isNew && (
+            <div className="px-4 py-2 text-muted text-xs">Cargando...</div>
+          )}
+
+          {/* Three-column workspace */}
+          <div className="flex-1 grid grid-cols-1 lg:grid-cols-[240px_minmax(0,1fr)_340px] xl:grid-cols-[260px_minmax(0,1fr)_380px] gap-0 min-h-0 overflow-hidden">
+            {/* LEFT: Compact palette */}
+            <aside className="hidden lg:flex flex-col border-r-2 border-ink bg-cream overflow-hidden">
+              <div className="px-3 py-2 border-b-2 border-ink bg-paper shrink-0">
+                <div className="flex items-center gap-1.5">
+                  <Layers size={13} className="text-brand" />
+                  <h3 className="font-display font-bold text-xs uppercase tracking-wider text-ink">Elementos</h3>
+                </div>
+                <p className="text-[10px] text-muted mt-0.5">Arrastra al canvas</p>
+              </div>
+              <div className="flex-1 overflow-y-auto p-3">
+                <FieldPalette />
+              </div>
+            </aside>
+
+            {/* CENTER: Canvas */}
+            <section className="flex flex-col bg-bg overflow-hidden">
+              {/* Compact metadata strip */}
+              <div className="border-b-2 border-ink bg-paper shrink-0">
+                <button
+                  onClick={() => setMetaOpen(!metaOpen)}
+                  className="w-full px-4 py-2 flex items-center justify-between hover:bg-cream"
+                >
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-muted">Metadatos del formulario</span>
+                  <span className="text-[10px] text-brand font-medium">{metaOpen ? 'Ocultar' : 'Mostrar'}</span>
+                </button>
+                {metaOpen && (
+                  <div className="px-4 pb-3 grid grid-cols-12 gap-2.5">
+                    <label className="block col-span-12 sm:col-span-8">
+                      <span className="text-[9px] font-bold uppercase tracking-wider text-muted">Descripcion corta</span>
+                      <input
+                        value={description}
+                        onChange={(e) => setDescription(e.target.value)}
+                        placeholder="Una linea explicando para que sirve"
+                        className="ftx-input mt-0.5 text-xs py-1.5"
+                      />
+                    </label>
+                    <label className="block col-span-6 sm:col-span-2">
+                      <span className="text-[9px] font-bold uppercase tracking-wider text-muted">Codigo</span>
+                      <input
+                        value={isNew ? 'auto' : `FTX-${formId?.toString().padStart(4, '0')}`}
+                        disabled
+                        className="ftx-input mt-0.5 text-xs py-1.5 font-mono"
+                      />
+                    </label>
+                    <label className="block col-span-6 sm:col-span-2">
+                      <span className="text-[9px] font-bold uppercase tracking-wider text-muted">Acceso</span>
+                      <select className="ftx-input mt-0.5 text-xs py-1.5" defaultValue="restricted">
+                        <option value="restricted">Restringido</option>
+                        <option value="public">Publico</option>
+                      </select>
+                    </label>
+                    <label className="block col-span-12">
+                      <span className="text-[9px] font-bold uppercase tracking-wider text-muted">Contexto detallado (alimenta a la IA)</span>
+                      <textarea
+                        value={context}
+                        onChange={(e) => setContext(e.target.value)}
+                        placeholder="Describe el proceso, los actores y los datos que el formulario debe capturar."
+                        rows={2}
+                        className="ftx-input mt-0.5 text-xs py-1.5 resize-y"
+                      />
+                    </label>
+                  </div>
+                )}
+              </div>
+
+              <div className="px-4 py-2 flex items-center justify-between border-b border-line shrink-0">
+                <div>
+                  <h3 className="font-display font-bold text-xs uppercase tracking-wider text-ink">Canvas</h3>
+                  <p className="text-[10px] text-muted">Grid de 12 columnas. Cada campo controla su ancho.</p>
+                </div>
+                <span className="ftx-tag ftx-tag-muted text-[9px]">{fields.length} campos</span>
+              </div>
+
+              <div className="flex-1 overflow-y-auto p-3">
+                <SortableContext items={sortableIds} strategy={rectSortingStrategy}>
+                  <CanvasDroppable fields={fields}>
+                    {fields.map((field, idx) => (
+                      <FieldEditor
+                        key={fieldSortableId(field, idx)}
+                        field={field}
+                        index={idx}
+                        selected={selectedKey === field.fieldKey}
+                        onSelect={() => setSelectedKey(field.fieldKey)}
+                        onChange={(next) => updateField(idx, next)}
+                        onDelete={() => deleteField(idx)}
+                      />
+                    ))}
+                  </CanvasDroppable>
+                </SortableContext>
+              </div>
+            </section>
+
+            {/* RIGHT: Preview / AI tabs */}
+            <aside className="hidden lg:flex flex-col border-l-2 border-ink bg-paper overflow-hidden">
+              <div className="flex border-b-2 border-ink bg-cream shrink-0">
+                <TabBtn active={rightTab === 'preview'} onClick={() => setRightTab('preview')} icon={<Eye size={13} />} label="Preview" />
+                <TabBtn active={rightTab === 'ai'} onClick={() => setRightTab('ai')} icon={<Sparkles size={13} />} label="Asistente IA" />
+              </div>
+              <div className="flex-1 overflow-y-auto p-3">
+                {rightTab === 'preview' ? (
+                  <FormPreview title={title} description={description} fields={fields} />
+                ) : (
+                  <AiSuggestionPanel
+                    formTitle={title}
+                    formContext={context}
+                    existingKeys={existingKeys}
+                    onPick={addFieldFromAi}
+                  />
+                )}
+              </div>
+            </aside>
+          </div>
         </div>
 
-        {/* Drag overlay */}
         <DragOverlay dropAnimation={null}>
           {activeDragType && (
-            <div className="ftx-palette-item flex items-center gap-2.5 shadow-xl border-brand">
-              <div className="size-8 shrink-0 rounded-md bg-brand text-white grid place-items-center font-semibold">
-                {FIELD_TYPE_META[activeDragType].glyph}
-              </div>
-              <div className="text-sm font-medium text-ink">
-                {FIELD_TYPE_META[activeDragType].label}
-              </div>
+            <div className="ftx-chip min-w-[80px] shadow-2xl ring-2 ring-brand">
+              <div className="font-display font-bold text-base text-brand">{FIELD_TYPE_META[activeDragType].glyph}</div>
+              <div className="text-[10px] font-medium text-ink">{FIELD_TYPE_META[activeDragType].label.split(' ')[0]}</div>
             </div>
           )}
           {activeReorderId && (() => {
@@ -383,12 +402,12 @@ export default function FormBuilderPage() {
             const f = idx >= 0 ? fields[idx] : null;
             if (!f) return null;
             return (
-              <div className="ftx-canvas-field shadow-2xl ring-2 ring-brand bg-white">
-                <div className="px-3 py-2.5 border-b border-line bg-surface-2 flex items-center gap-2">
-                  <span className="size-7 rounded bg-brand-tint border border-brand/20 grid place-items-center text-brand-deep text-xs font-semibold">
+              <div className={`${widthClassName(f.width)} ftx-canvas-field shadow-2xl ring-2 ring-brand bg-paper`}>
+                <div className="px-2 py-1.5 border-b-2 border-line bg-cream flex items-center gap-1.5">
+                  <span className="size-6 rounded bg-brand/10 grid place-items-center text-brand text-xs font-bold">
                     {FIELD_TYPE_META[f.fieldType].glyph}
                   </span>
-                  <span className="text-sm font-medium text-ink">{f.label}</span>
+                  <span className="text-xs font-medium text-ink truncate">{f.label}</span>
                 </div>
               </div>
             );
@@ -396,6 +415,28 @@ export default function FormBuilderPage() {
         </DragOverlay>
       </DndContext>
     </AppShell>
+  );
+}
+
+function TabBtn({
+  active, onClick, icon, label,
+}: {
+  active: boolean;
+  onClick: () => void;
+  icon: React.ReactNode;
+  label: string;
+}) {
+  return (
+    <button
+      onClick={onClick}
+      className={[
+        'flex-1 px-3 py-2 text-xs font-bold flex items-center justify-center gap-1.5 transition-colors border-r-2 border-ink last:border-r-0',
+        active ? 'bg-paper text-ink border-b-0' : 'text-muted hover:text-ink hover:bg-paper',
+      ].join(' ')}
+    >
+      {icon}
+      <span>{label}</span>
+    </button>
   );
 }
 
@@ -417,4 +458,12 @@ const labelForType = (type: FieldType): string => {
     SIGNATURE: 'Firma',
   };
   return labels[type];
+};
+
+const defaultWidthFor = (type: FieldType): FieldWidth => {
+  const wide: FieldType[] = ['TEXTAREA', 'FILE', 'SIGNATURE'];
+  const half: FieldType[] = ['TEXT', 'EMAIL', 'PHONE', 'URL', 'NUMBER', 'DATE', 'DATETIME', 'SELECT'];
+  if (wide.includes(type)) return 12;
+  if (half.includes(type)) return 6;
+  return 12;
 };

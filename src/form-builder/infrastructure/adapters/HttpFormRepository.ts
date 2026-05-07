@@ -1,6 +1,6 @@
 import type { AxiosInstance } from 'axios';
 import { Form, type FormStatus } from '../../domain/models/Form';
-import { FormField } from '../../domain/models/FormField';
+import { FormField, type FieldWidth } from '../../domain/models/FormField';
 import type { FieldType } from '../../domain/models/FieldType';
 import type { FormDraft, IFormRepository } from '../../domain/ports/IFormRepository';
 
@@ -13,6 +13,7 @@ interface FormFieldDto {
   placeholder: string | null;
   helpText: string | null;
   position: number;
+  width: number;
   options: string | null;
 }
 
@@ -29,6 +30,13 @@ interface FormDto {
   updatedAt: string | null;
 }
 
+const clampWidth = (w: number): FieldWidth => {
+  const n = Math.round(w);
+  if (n < 1) return 1;
+  if (n > 12) return 12;
+  return n as FieldWidth;
+};
+
 const toForm = (dto: FormDto): Form => {
   const fields = (dto.fields ?? []).map(
     (f) =>
@@ -41,6 +49,7 @@ const toForm = (dto: FormDto): Form => {
         placeholder: f.placeholder,
         helpText: f.helpText,
         position: f.position,
+        width: clampWidth(f.width ?? 12),
         options: f.options,
       }),
   );
@@ -71,6 +80,7 @@ const draftToBody = (draft: FormDraft) => ({
     placeholder: f.placeholder ?? '',
     helpText: f.helpText ?? '',
     position: idx,
+    width: f.width,
     options: f.options ?? '',
   })),
 });

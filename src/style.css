@@ -1,39 +1,27 @@
 @import "tailwindcss";
-@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Manrope:wght@500;600;700;800&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Manrope:wght@600;700;800&display=swap");
 
 @theme {
-  /* Brand red (inspirado en Claro / palette afín) */
   --color-brand:        #DA291C;
   --color-brand-dark:   #A8160C;
   --color-brand-deep:   #7E0F08;
   --color-brand-soft:   #FCE7E5;
   --color-brand-tint:   #FFF1EF;
 
-  /* Sidebar / nav (dark teal) */
-  --color-nav:          #14424A;
-  --color-nav-2:        #1A5662;
-  --color-nav-3:        #2A7384;
-  --color-nav-active:   #0E2E33;
+  --color-ink:          #111827;
+  --color-ink-2:        #374151;
+  --color-muted:        #6B7280;
+  --color-line:         #E5E7EB;
+  --color-line-strong:  #D1D5DB;
+  --color-bg:           #F8F8F6;
+  --color-paper:        #FFFFFF;
+  --color-cream:        #FAF7F2;
 
-  /* Surfaces */
-  --color-bg:           #F4F6F8;
-  --color-surface:      #FFFFFF;
-  --color-surface-2:    #F8FAFB;
+  --color-deep:         #0F2A33;
 
-  /* Text */
-  --color-ink:          #14202B;
-  --color-ink-2:        #3B4A57;
-  --color-muted:        #6B7785;
-
-  /* Borders */
-  --color-line:         #E2E7EC;
-  --color-line-strong:  #C7D0DA;
-
-  /* Status */
-  --color-success:      #11A36C;
-  --color-warning:      #E89B14;
-  --color-info:         #2C7BD6;
-  --color-danger:       #DA291C;
+  --color-success:      #0D9460;
+  --color-warning:      #C97A0A;
+  --color-info:         #1F5FB8;
 
   --font-display:       "Manrope", system-ui, sans-serif;
   --font-sans:          "Inter", system-ui, sans-serif;
@@ -44,93 +32,101 @@ body {
   background: var(--color-bg);
   color: var(--color-ink);
   font-family: var(--font-sans);
-  font-feature-settings: "ss01", "cv11";
   -webkit-font-smoothing: antialiased;
 }
 * { box-sizing: border-box; }
 ::selection { background: var(--color-brand-soft); color: var(--color-brand-deep); }
 
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--color-line-strong); border: 2px solid transparent; background-clip: padding-box; border-radius: 999px; }
+::-webkit-scrollbar-thumb:hover { background: var(--color-muted); border: 2px solid transparent; background-clip: padding-box; }
+
 @layer components {
   .ftx-card {
-    background: var(--color-surface);
-    border: 1px solid var(--color-line);
-    border-radius: 8px;
-    box-shadow: 0 1px 2px rgba(20, 32, 43, 0.04);
+    background: var(--color-paper);
+    border: 2px solid var(--color-ink);
+    border-radius: 6px;
+    box-shadow: 2px 2px 0 0 var(--color-ink);
   }
-  .ftx-card-elev {
-    background: var(--color-surface);
+  .ftx-card-flat {
+    background: var(--color-paper);
     border: 1px solid var(--color-line);
-    border-radius: 10px;
-    box-shadow: 0 4px 14px rgba(20, 32, 43, 0.06);
+    border-radius: 6px;
   }
 
   .ftx-input {
     width: 100%;
-    background: var(--color-surface);
-    border: 1px solid var(--color-line-strong);
-    border-radius: 6px;
-    padding: 0.55rem 0.75rem;
-    font-size: 0.9rem;
+    background: var(--color-paper);
+    border: 2px solid var(--color-line-strong);
+    border-radius: 4px;
+    padding: 0.5rem 0.7rem;
+    font-size: 0.875rem;
     color: var(--color-ink);
-    transition: border-color 120ms ease, box-shadow 120ms ease;
+    transition: border-color 100ms ease, box-shadow 100ms ease;
   }
-  .ftx-input::placeholder { color: #9AA5B1; }
-  .ftx-input:hover { border-color: #95A1AE; }
+  .ftx-input::placeholder { color: #9CA3AF; }
+  .ftx-input:hover { border-color: var(--color-muted); }
   .ftx-input:focus {
     outline: none;
-    border-color: var(--color-brand);
-    box-shadow: 0 0 0 3px rgba(218, 41, 28, 0.18);
+    border-color: var(--color-ink);
+    box-shadow: 2px 2px 0 0 var(--color-brand);
   }
 
   .ftx-btn {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    gap: 0.5rem;
-    padding: 0.55rem 1rem;
+    gap: 0.45rem;
+    padding: 0.5rem 0.9rem;
     font-family: var(--font-sans);
     font-weight: 500;
-    font-size: 0.875rem;
-    border: 1px solid var(--color-line-strong);
-    border-radius: 6px;
-    background: var(--color-surface);
+    font-size: 0.85rem;
+    border: 2px solid var(--color-ink);
+    border-radius: 4px;
+    background: var(--color-paper);
     color: var(--color-ink);
     cursor: pointer;
-    transition: all 120ms ease;
+    transition: transform 80ms ease, box-shadow 80ms ease, background 80ms ease;
+    box-shadow: 2px 2px 0 0 var(--color-ink);
   }
   .ftx-btn:hover:not(:disabled) {
-    background: var(--color-surface-2);
-    border-color: var(--color-muted);
+    transform: translate(-1px, -1px);
+    box-shadow: 3px 3px 0 0 var(--color-ink);
+    background: var(--color-cream);
   }
-  .ftx-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+  .ftx-btn:active:not(:disabled) {
+    transform: translate(1px, 1px);
+    box-shadow: 0 0 0 0 var(--color-ink);
+  }
+  .ftx-btn:disabled { opacity: 0.5; cursor: not-allowed; box-shadow: none; }
 
   .ftx-btn-primary {
     background: var(--color-brand);
     color: #fff;
-    border-color: var(--color-brand);
   }
   .ftx-btn-primary:hover:not(:disabled) {
     background: var(--color-brand-dark);
-    border-color: var(--color-brand-dark);
   }
 
   .ftx-btn-ghost {
     background: transparent;
     border-color: transparent;
+    box-shadow: none;
   }
   .ftx-btn-ghost:hover:not(:disabled) {
-    background: var(--color-surface-2);
-    border-color: var(--color-line);
+    background: var(--color-cream);
+    border-color: var(--color-ink);
+    transform: none;
+    box-shadow: 2px 2px 0 0 var(--color-ink);
   }
 
   .ftx-btn-danger {
-    background: #fff;
+    background: var(--color-paper);
     color: var(--color-brand);
-    border-color: var(--color-line-strong);
   }
   .ftx-btn-danger:hover:not(:disabled) {
     background: var(--color-brand-soft);
-    border-color: var(--color-brand);
   }
 
   .ftx-tag {
@@ -138,100 +134,102 @@ body {
     align-items: center;
     padding: 0.18rem 0.5rem;
     font-size: 0.7rem;
-    letter-spacing: 0.02em;
+    letter-spacing: 0.04em;
     text-transform: uppercase;
-    font-weight: 600;
-    border-radius: 999px;
-    background: var(--color-surface-2);
-    color: var(--color-ink-2);
-    border: 1px solid var(--color-line);
+    font-weight: 700;
+    border: 2px solid var(--color-ink);
+    border-radius: 3px;
+    background: var(--color-paper);
+    color: var(--color-ink);
   }
-  .ftx-tag-brand   { background: var(--color-brand-soft); color: var(--color-brand-deep); border-color: #F4C5C0; }
-  .ftx-tag-success { background: #DEF7ED; color: #06734A; border-color: #B5ECD1; }
-  .ftx-tag-warn    { background: #FFF3DE; color: #8A5800; border-color: #F7D9A1; }
-  .ftx-tag-info    { background: #E1EEFB; color: #1B5394; border-color: #BCD7F2; }
-  .ftx-tag-muted   { background: #EDF0F3; color: var(--color-muted); }
+  .ftx-tag-brand   { background: var(--color-brand); color: #fff; }
+  .ftx-tag-success { background: var(--color-success); color: #fff; }
+  .ftx-tag-warn    { background: var(--color-warning); color: #fff; }
+  .ftx-tag-info    { background: var(--color-info); color: #fff; }
+  .ftx-tag-muted   { background: var(--color-cream); color: var(--color-muted); border-color: var(--color-line-strong); }
 
   .ftx-form-header {
-    background: linear-gradient(180deg, var(--color-brand) 0%, var(--color-brand-dark) 100%);
+    background: var(--color-brand);
     color: #fff;
+    border-bottom: 2px solid var(--color-ink);
   }
 
   .ftx-drop-zone {
     border: 2px dashed var(--color-line-strong);
-    border-radius: 10px;
-    background: var(--color-surface-2);
-    transition: border-color 120ms ease, background 120ms ease;
+    border-radius: 6px;
+    background: var(--color-cream);
+    transition: border-color 100ms ease, background 100ms ease;
   }
   .ftx-drop-zone-active {
     border-color: var(--color-brand);
+    border-style: solid;
     background: var(--color-brand-tint);
   }
 
-  .ftx-palette-item {
-    background: var(--color-surface);
-    border: 1px solid var(--color-line);
-    border-radius: 8px;
-    padding: 0.7rem 0.85rem;
+  .ftx-chip {
+    background: var(--color-paper);
+    border: 2px solid var(--color-ink);
+    border-radius: 5px;
+    padding: 0.45rem 0.35rem;
     cursor: grab;
-    transition: all 120ms ease;
     user-select: none;
+    transition: transform 80ms ease, box-shadow 80ms ease;
+    box-shadow: 1px 1px 0 0 var(--color-ink);
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.3rem;
+    min-height: 70px;
   }
-  .ftx-palette-item:hover {
+  .ftx-chip:hover {
+    transform: translate(-1px, -1px);
+    box-shadow: 2px 2px 0 0 var(--color-brand);
     border-color: var(--color-brand);
-    box-shadow: 0 2px 8px rgba(218, 41, 28, 0.12);
-    transform: translateY(-1px);
   }
-  .ftx-palette-item:active { cursor: grabbing; }
+  .ftx-chip:active { cursor: grabbing; }
 
   .ftx-canvas-field {
-    background: var(--color-surface);
-    border: 1px solid var(--color-line);
-    border-radius: 8px;
-    transition: border-color 120ms ease, box-shadow 120ms ease;
+    background: var(--color-paper);
+    border: 2px solid var(--color-ink);
+    border-radius: 5px;
+    box-shadow: 1px 1px 0 0 var(--color-ink);
+    transition: box-shadow 100ms ease, border-color 100ms ease;
   }
-  .ftx-canvas-field:hover { border-color: var(--color-line-strong); }
+  .ftx-canvas-field:hover { box-shadow: 2px 2px 0 0 var(--color-ink); }
   .ftx-canvas-field-active {
     border-color: var(--color-brand);
-    box-shadow: 0 0 0 3px rgba(218, 41, 28, 0.12);
+    box-shadow: 2px 2px 0 0 var(--color-brand);
   }
 
   .ftx-sidebar-link {
     display: flex;
     align-items: center;
     gap: 0.7rem;
-    padding: 0.6rem 1rem;
-    color: #B7C7CC;
-    font-size: 0.875rem;
+    padding: 0.55rem 0.95rem;
+    color: rgba(255, 255, 255, 0.75);
+    font-size: 0.85rem;
     border-left: 3px solid transparent;
-    transition: background 120ms ease, color 120ms ease;
+    transition: background 100ms ease, color 100ms ease;
   }
   .ftx-sidebar-link:hover {
-    background: var(--color-nav-2);
+    background: rgba(255, 255, 255, 0.06);
     color: #fff;
   }
   .ftx-sidebar-link.active {
-    background: var(--color-nav-active);
+    background: rgba(0, 0, 0, 0.25);
     color: #fff;
     border-left-color: var(--color-brand);
   }
 
-  .ftx-section-bar {
-    background: var(--color-brand);
-    color: #fff;
-    padding: 0.6rem 1rem;
-    font-weight: 600;
-    font-size: 0.85rem;
-    letter-spacing: 0.03em;
-    text-transform: uppercase;
-    border-radius: 6px 6px 0 0;
-  }
-
-  .ftx-grid-bg {
-    background-color: var(--color-bg);
-    background-image:
-      linear-gradient(rgba(20, 66, 74, 0.06) 1px, transparent 1px),
-      linear-gradient(90deg, rgba(20, 66, 74, 0.06) 1px, transparent 1px);
-    background-size: 24px 24px;
+  .ftx-stripe {
+    background-image: repeating-linear-gradient(
+      45deg,
+      var(--color-ink),
+      var(--color-ink) 5px,
+      var(--color-brand) 5px,
+      var(--color-brand) 10px
+    );
   }
 }

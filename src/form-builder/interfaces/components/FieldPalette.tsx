@@ -1,14 +1,9 @@
 import { useDraggable } from '@dnd-kit/core';
-import { GripVertical } from 'lucide-react';
 import { FIELD_GROUPS, FIELD_TYPE_META, FIELD_TYPES, type FieldType } from '../../domain/models/FieldType';
 
 export const PALETTE_DRAG_PREFIX = 'palette:';
 
-interface PaletteItemProps {
-  type: FieldType;
-}
-
-function PaletteItem({ type }: PaletteItemProps) {
+function PaletteChip({ type }: { type: FieldType }) {
   const meta = FIELD_TYPE_META[type];
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
     id: `${PALETTE_DRAG_PREFIX}${type}`,
@@ -20,39 +15,44 @@ function PaletteItem({ type }: PaletteItemProps) {
       ref={setNodeRef}
       {...listeners}
       {...attributes}
+      title={`${meta.label} - ${meta.description}`}
       className={[
-        'ftx-palette-item flex items-center gap-2.5 group',
+        'ftx-chip',
         isDragging ? 'opacity-30' : '',
       ].join(' ')}
     >
-      <div className="size-8 shrink-0 rounded-md bg-brand-tint border border-brand/20 grid place-items-center text-brand-deep font-semibold">
+      <div className="font-display font-bold text-base text-brand">
         {meta.glyph}
       </div>
-      <div className="flex-1 min-w-0">
-        <div className="text-sm font-medium text-ink truncate">{meta.label}</div>
-        <div className="text-[11px] text-muted truncate">{meta.description}</div>
+      <div className="text-[10px] font-medium leading-tight text-ink line-clamp-1">
+        {meta.label.split(' ')[0]}
       </div>
-      <GripVertical size={14} className="text-line-strong opacity-0 group-hover:opacity-100 transition-opacity" />
     </div>
   );
 }
 
 export function FieldPalette() {
   return (
-    <div className="space-y-5">
+    <div className="space-y-3">
       {FIELD_GROUPS.map((group) => {
         const types = FIELD_TYPES.filter((t) => FIELD_TYPE_META[t].group === group.id);
         return (
           <div key={group.id}>
-            <div className="text-[10px] font-semibold uppercase tracking-wider text-muted mb-2 px-1">
+            <div className="text-[9px] font-bold uppercase tracking-widest text-muted mb-1.5 px-0.5">
               {group.label}
             </div>
-            <div className="space-y-1.5">
-              {types.map((t) => <PaletteItem key={t} type={t} />)}
+            <div className="grid grid-cols-3 gap-1.5">
+              {types.map((t) => <PaletteChip key={t} type={t} />)}
             </div>
           </div>
         );
       })}
+
+      <div className="mt-3 pt-3 border-t-2 border-dashed border-line">
+        <p className="text-[10px] text-muted leading-relaxed px-0.5">
+          Arrastra al canvas o usa el asistente de IA para generar campos a partir del contexto.
+        </p>
+      </div>
     </div>
   );
 }
