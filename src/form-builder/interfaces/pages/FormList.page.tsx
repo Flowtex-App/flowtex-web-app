@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Plus, Search, Trash2, Send, Pencil, FileText, Filter } from 'lucide-react';
+import { Plus, Search, Trash2, Send, Pencil, FileText, Filter, FileEdit } from 'lucide-react';
 import { AppShell } from '@/shared/ui/components/AppShell';
 import { Button } from '@/shared/ui/components/Button';
 import { useFormsStore } from '../stores/forms.store';
@@ -125,6 +125,16 @@ export default function FormListPage() {
                   <td className="px-4 py-3.5 text-center text-sm text-ink-2">{form.version}</td>
                   <td className="px-4 py-3.5">
                     <div className="flex items-center justify-end gap-1">
+                      {form.status === 'PUBLISHED' && (
+                        <button
+                          onClick={() => navigate(`/forms/${form.id}/fill`)}
+                          className="ftx-btn ftx-btn-primary !text-xs !py-1 !px-2"
+                          title="Llenar y enviar"
+                          aria-label="Llenar"
+                        >
+                          <FileEdit size={13} /> Llenar
+                        </button>
+                      )}
                       <button
                         onClick={() => navigate(`/forms/${form.id}`)}
                         className="ftx-btn ftx-btn-ghost p-1.5"

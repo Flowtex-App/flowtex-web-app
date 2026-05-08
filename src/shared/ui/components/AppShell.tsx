@@ -33,9 +33,10 @@ const navGroups: NavGroup[] = [
     id: 'bandejas',
     title: 'Bandejas',
     items: [
-      { to: '/dashboard',           label: 'Mi cola',          icon: <Inbox size={14} />,           end: true },
-      { to: '/forms?status=ALL',    label: 'Solicitudes',      icon: <FileSpreadsheet size={14} /> },
-      { to: '/forms?search=true',   label: 'Buscar',           icon: <Search size={14} /> },
+      { to: '/dashboard',                  label: 'Mi cola',          icon: <Inbox size={14} />, end: true },
+      { to: '/submissions?scope=mine',     label: 'Mis solicitudes',  icon: <FileSpreadsheet size={14} /> },
+      { to: '/submissions?scope=assigned', label: 'Por aprobar',      icon: <Inbox size={14} /> },
+      { to: '/submissions?scope=all',      label: 'Todas',            icon: <Search size={14} /> },
     ],
   },
   {

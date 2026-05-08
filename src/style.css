@@ -776,3 +776,42 @@ body {
     stroke-linejoin: round;
   }
 }
+
+/* ─── Print stylesheet ──────────────────────────────────────────────────
+   Aplica al hacer File → Print (o Ctrl+P) en SubmissionDetail.
+   Convierte la vista en un documento limpio y oficial.
+*/
+@media print {
+  * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+
+  /* Oculta toda la app salvo el área marcada como printable */
+  body { background: white !important; }
+  aside, header, nav, [class*="ftx-icon-btn"] { display: none !important; }
+  .print\:hidden { display: none !important; }
+
+  main {
+    overflow: visible !important;
+    padding: 0 !important;
+    max-width: none !important;
+  }
+
+  #ftx-printable {
+    padding: 24px !important;
+    max-width: 100% !important;
+  }
+
+  #ftx-printable .ftx-card,
+  #ftx-printable .ftx-card-elev {
+    box-shadow: none !important;
+    border: 1px solid #d1d5db !important;
+    page-break-inside: avoid;
+  }
+
+  #ftx-printable section { break-inside: avoid; }
+
+  /* Coloca el ticket arriba a la derecha, como un sello */
+  #ftx-printable header {
+    border-top: 4px solid var(--ftx-brand);
+  }
+}
+
