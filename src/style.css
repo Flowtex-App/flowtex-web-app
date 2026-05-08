@@ -777,6 +777,29 @@ body {
   }
 }
 
+/* ─── Drop cells (canvas grid) ──────────────────────────────────────────
+   Cada celda 1×1 del grid 12-col es un drop target. Invisible cuando no
+   hay drag activo; durante drag muestra un outline tenue, y la celda
+   bajo el cursor se resalta con el color brand.
+*/
+.ftx-drop-cell-idle {
+  /* Fuera de drag: las celdas existen para registrar dnd-kit pero no se ven */
+  visibility: hidden;
+}
+.ftx-drop-cell {
+  /* Durante drag: outline punteado tenue para mostrar la grilla */
+  border: 1px dashed var(--ftx-line);
+  background: transparent;
+  min-height: 80px;
+  transition: background 120ms ease, border-color 120ms ease;
+}
+.ftx-drop-cell-active {
+  /* Celda destino del drag: highlight brand */
+  border: 2px solid var(--ftx-brand);
+  background: var(--ftx-brand-tint);
+  box-shadow: 0 0 0 1px var(--ftx-brand) inset;
+}
+
 /* ─── Print stylesheet ──────────────────────────────────────────────────
    Aplica al hacer File → Print (o Ctrl+P) en SubmissionDetail.
    Convierte la vista en un documento limpio y oficial.

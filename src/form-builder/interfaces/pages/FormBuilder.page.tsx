@@ -40,47 +40,135 @@ function fieldSortableId(field: FormField, index: number): string {
   return field.id ? `field:${field.id}` : `field:tmp-${field.fieldKey}-${index}`;
 }
 
-function CanvasDroppable({
-  fields, children, pageLabel,
+/** Grid row height in pixels — single source of truth for the canvas. */
+const GRID_ROW_PX = 80;
+/** Min rows to show even on empty pages. */
+const MIN_ROWS = 10;
+/** Extra empty rows below the last placed field (to permit dropping further down). */
+const EXTRA_TRAIL_ROWS = 4;
+
+/**
+ * Una celda del grid que actúa como drop target. Se renderiza siempre (para
+ * que dnd-kit la registre y detecte hover por bounding rect), pero solo es
+ * visible/interactiva durante un drag activo.
+ */
+function DropCell({
+  row, col, dragging, dragWidth,
+}: {
+  row: number;
+  col: number;
+  dragging: boolean;
+  /** Ancho del field que se está arrastrando (para resaltar las celdas adyacentes). */
+  dragWidth: number;
+}) {
+  const id = `cell:r${row}c${col}`;
+  const { isOver, setNodeRef } = useDroppable({ id, data: { row, col } });
+
+  // Cuando esta celda es la "head" del drop (isOver), también se highlightean
+  // las celdas a su derecha hasta cubrir dragWidth, para que el usuario vea
+  // visualmente cuánto espacio va a ocupar el field.
+  // (Las celdas adyacentes calculan esto leyendo isOver de su propio hook,
+  // así que aquí solo nos importa la "cabeza".)
+  return (
+    <div
+      ref={setNodeRef}
+      style={{
+        gridColumnStart: col,
+        gridRowStart: row,
+        zIndex: 0,
+        pointerEvents: dragging ? 'auto' : 'none',
+      }}
+      className={[
+        'rounded transition-colors',
+        dragging ? 'ftx-drop-cell' : 'ftx-drop-cell-idle',
+        dragging && isOver ? 'ftx-drop-cell-active' : '',
+      ].join(' ')}
+      data-row={row}
+      data-col={col}
+      data-dragwidth={dragWidth}
+    />
+  );
+}
+
+/**
+ * El canvas: grid 12 cols × N filas con celdas droppable.
+ *
+ * Cada celda se posiciona en (col, row) con CSS grid. Los fields se posicionan
+ * encima usando gridColumnStart/gridRowStart explícitos cuando tienen
+ * coordenadas; los que no tienen (legacy) caen al modo de auto-flow.
+ */
+function CanvasGrid({
+  fields, children, dragging, dragWidth, pageLabel,
 }: {
   fields: FormField[];
   children: React.ReactNode;
+  dragging: boolean;
+  dragWidth: number;
   pageLabel: string;
 }) {
-  const { isOver, setNodeRef } = useDroppable({ id: CANVAS_DROP_ID });
+  const { isOver: isOverGrid, setNodeRef } = useDroppable({ id: CANVAS_DROP_ID });
 
-  if (fields.length === 0) {
-    return (
-      <div
-        ref={setNodeRef}
-        className={[
-          'ftx-drop-zone min-h-[420px] grid place-items-center px-6 transition-colors',
-          isOver ? 'ftx-drop-zone-active' : '',
-        ].join(' ')}
-      >
-        <div className="text-center max-w-sm">
-          <MousePointerClick size={32} className="mx-auto" style={{ color: 'var(--ftx-line-strong)' }} />
-          <p className="font-display font-bold text-base text-ink mt-3">
-            <span className="text-brand">{pageLabel}</span> sin campos
-          </p>
-          <p className="text-xs text-muted mt-1.5 leading-relaxed">
-            Arrastra elementos desde la paleta izquierda. Cada elemento se ajusta
-            al grid de 12 columnas; arrastra el borde derecho o inferior para
-            cambiar ancho y alto.
-          </p>
-        </div>
-      </div>
-    );
-  }
+  // Calcula cuántas filas necesitamos: la fila más baja ocupada por un field
+  // posicionado, +EXTRA para drop extra abajo, y un piso de MIN_ROWS.
+  const rowsCount = useMemo(() => {
+    const placedRows = fields
+      .filter((f) => f.rowStart != null)
+      .map((f) => (f.rowStart ?? 1) + (f.rows ?? 1) - 1);
+    const flowingRows = fields.filter((f) => f.rowStart == null).length;
+    const used = Math.max(flowingRows, ...placedRows, 0);
+    return Math.max(MIN_ROWS, used + EXTRA_TRAIL_ROWS);
+  }, [fields]);
 
   return (
     <div
       ref={setNodeRef}
       className={[
-        'relative grid grid-cols-12 gap-2 p-3 transition-colors auto-rows-min',
-        isOver ? 'bg-brand-tint/40' : '',
+        'relative grid grid-cols-12 gap-2 p-3 transition-colors',
+        isOverGrid ? 'bg-brand-tint/30' : '',
       ].join(' ')}
+      style={{
+        gridTemplateRows: `repeat(${rowsCount}, minmax(${GRID_ROW_PX}px, auto))`,
+      }}
     >
+      {/* Layer de DropCells. Siempre montadas (para dnd-kit), pero invisibles
+          fuera de drag para no contaminar la UI. */}
+      {Array.from({ length: rowsCount }).map((_, r) =>
+        Array.from({ length: 12 }).map((_, c) => (
+          <DropCell
+            key={`r${r + 1}c${c + 1}`}
+            row={r + 1}
+            col={c + 1}
+            dragging={dragging}
+            dragWidth={dragWidth}
+          />
+        )),
+      )}
+
+      {/* Empty-state hint cuando no hay nada todavía y no hay drag */}
+      {fields.length === 0 && !dragging && (
+        <div
+          className="pointer-events-none text-center max-w-sm"
+          style={{
+            gridColumnStart: 1,
+            gridColumnEnd: 13,
+            gridRowStart: Math.floor(rowsCount / 2),
+            gridRowEnd: 'span 2',
+            placeSelf: 'center',
+            zIndex: 2,
+          }}
+        >
+          <MousePointerClick size={32} className="mx-auto" style={{ color: 'var(--ftx-line-strong)' }} />
+          <p className="font-display font-bold text-base text-ink mt-3">
+            <span className="text-brand">{pageLabel}</span> sin campos
+          </p>
+          <p className="text-xs text-muted mt-1.5 leading-relaxed">
+            Arrastra cualquier elemento desde la paleta izquierda hasta la
+            celda donde quieras colocarlo. Puedes dejar filas vacías como
+            espaciadores.
+          </p>
+        </div>
+      )}
+
       {children}
     </div>
   );
@@ -216,7 +304,48 @@ export default function FormBuilderPage() {
 
     const activeId = String(active.id);
     const overId = String(over.id);
+    const overData = over.data.current as { row?: number; col?: number } | undefined;
 
+    // ── Caso 1: drop sobre una celda específica del grid ────────────────
+    // El campo se posiciona en (col, row) absoluto; el grid respeta el hueco
+    // y permite filas vacías intencionales.
+    if (overId.startsWith('cell:') && overData?.row && overData?.col) {
+      const dropRow = overData.row;
+      const dropCol = overData.col;
+
+      if (activeId.startsWith(PALETTE_DRAG_PREFIX)) {
+        // Crear nuevo desde la paleta y posicionarlo en la celda objetivo
+        const type = activeId.replace(PALETTE_DRAG_PREFIX, '') as FieldType;
+        const baseField = buildField(type);
+        // Si el width default sale del grid, recortarlo a lo que queda
+        const maxWidth = (12 - dropCol + 1) as FieldWidth;
+        const finalWidth = (Math.min(baseField.width, maxWidth) || 1) as FieldWidth;
+        const next = baseField.with({
+          colStart: dropCol,
+          rowStart: dropRow,
+          width: finalWidth,
+        });
+        setFields([...fields, next].map((f, i) => f.with({ position: i })));
+        setSelectedKey(next.fieldKey);
+        setRightTab('inspector');
+      } else {
+        // Mover field existente a la celda
+        const moved = visibleFields.find((f, i) => fieldSortableId(f, i) === activeId);
+        if (moved) {
+          const maxWidth = (12 - dropCol + 1) as FieldWidth;
+          const finalWidth = (Math.min(moved.width, maxWidth) || 1) as FieldWidth;
+          const updated = moved.with({
+            colStart: dropCol,
+            rowStart: dropRow,
+            width: finalWidth,
+          });
+          setFields(fields.map((f) => (f === moved ? updated : f)));
+        }
+      }
+      return;
+    }
+
+    // ── Caso 2: drop sobre otro field (mantiene reorder secuencial) ─────
     if (activeId.startsWith(PALETTE_DRAG_PREFIX)) {
       const type = activeId.replace(PALETTE_DRAG_PREFIX, '') as FieldType;
       const next = buildField(type);
@@ -555,7 +684,19 @@ export default function FormBuilderPage() {
                   <div className="relative min-h-[420px]">
                     <div className="ftx-canvas-grid-bg" />
                     <SortableContext items={sortableIds} strategy={rectSortingStrategy}>
-                      <CanvasDroppable fields={visibleFields} pageLabel={activePageLabel}>
+                      <CanvasGrid
+                        fields={visibleFields}
+                        pageLabel={activePageLabel}
+                        dragging={activeDragType !== null || activeReorderId !== null}
+                        dragWidth={
+                          activeDragType
+                            ? (FIELD_TYPE_META[activeDragType].defaultWidth as number)
+                            : (() => {
+                                const idx = sortableIds.indexOf(activeReorderId ?? '');
+                                return idx >= 0 ? visibleFields[idx]?.width ?? 1 : 1;
+                              })()
+                        }
+                      >
                         {visibleFields.map((field, idx) => (
                           <FieldEditor
                             key={fieldSortableId(field, idx)}
@@ -571,7 +712,7 @@ export default function FormBuilderPage() {
                             onDelete={() => deleteField(field)}
                           />
                         ))}
-                      </CanvasDroppable>
+                      </CanvasGrid>
                     </SortableContext>
                   </div>
                 </div>

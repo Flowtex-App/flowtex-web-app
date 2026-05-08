@@ -38,14 +38,22 @@ export function FieldEditor({
   const effectiveWidth = previewWidth ?? field.width;
   const effectiveRows = previewRows ?? field.rows;
 
+  const positioned = field.colStart != null;
   const style: React.CSSProperties = {
     transform: CSS.Transform.toString(transform),
     transition,
-    zIndex: isDragging ? 50 : undefined,
-    minHeight: `${effectiveRows * 90}px`,
-    ...(field.colStart != null ? { gridColumnStart: field.colStart } : {}),
-    ...(field.rowStart != null ? { gridRowStart: field.rowStart } : {}),
-    ...(effectiveRows > 1 ? { gridRowEnd: `span ${effectiveRows}` } : {}),
+    zIndex: isDragging ? 50 : 1,
+    minHeight: `${effectiveRows * 80}px`,
+    ...(positioned
+      ? {
+          gridColumnStart: field.colStart!,
+          gridColumnEnd: `span ${effectiveWidth}`,
+          gridRowStart: field.rowStart ?? 'auto',
+          gridRowEnd: effectiveRows > 1 ? `span ${effectiveRows}` : 'auto',
+        }
+      : {
+          ...(effectiveRows > 1 ? { gridRowEnd: `span ${effectiveRows}` } : {}),
+        }),
   };
 
   // Horizontal width resize via right-edge handle
@@ -134,7 +142,7 @@ export function FieldEditor({
       style={style}
       onClick={onSelect}
       className={[
-        widthClassName(effectiveWidth),
+        positioned ? '' : widthClassName(effectiveWidth),
         'ftx-tile',
         isPresentational ? 'ftx-tile-presentational' : '',
         selected ? 'ftx-tile-active' : '',
