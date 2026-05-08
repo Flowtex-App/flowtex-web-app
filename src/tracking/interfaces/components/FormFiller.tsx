@@ -217,29 +217,56 @@ function renderControl(
 }
 
 function PresentationalBlock({ field }: { field: FormSnapshotField }) {
+  // Lee configuración visual (bg, fg, src, alt) desde el JSON en `options`.
+  let cfg: { bg?: string; fg?: string; src?: string; alt?: string } = {};
+  if (field.options) {
+    try {
+      const parsed = JSON.parse(field.options);
+      if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) cfg = parsed;
+    } catch { /* ignore */ }
+  }
+  const blockStyle: React.CSSProperties = {
+    ...(cfg.bg ? { background: cfg.bg, padding: '12px 14px', borderRadius: 6 } : {}),
+    ...(cfg.fg ? { color: cfg.fg } : {}),
+  };
+
   switch (field.fieldType) {
     case 'HEADING':
       return (
-        <div>
-          <h3 className="font-display font-bold text-xl text-ink leading-tight">
+        <div style={blockStyle}>
+          <h3
+            className="font-display font-bold text-xl leading-tight"
+            style={cfg.fg ? { color: cfg.fg } : { color: 'var(--ftx-ink)' }}
+          >
             {field.label || 'Encabezado'}
           </h3>
           {field.helpText && (
-            <p className="text-[12px] text-muted mt-1 italic">{field.helpText}</p>
+            <p className="text-[12px] mt-1 italic" style={{ color: cfg.fg ?? 'var(--ftx-muted)' }}>
+              {field.helpText}
+            </p>
           )}
         </div>
       );
     case 'PARAGRAPH':
       return (
-        <p className="text-sm text-ink-2 leading-relaxed whitespace-pre-line break-words">
+        <p
+          className="text-sm leading-relaxed whitespace-pre-line break-words"
+          style={{
+            color: cfg.fg ?? 'var(--ftx-ink-2)',
+            ...(cfg.bg ? { background: cfg.bg, padding: '12px 14px', borderRadius: 6 } : {}),
+          }}
+        >
           {field.helpText || field.label}
         </p>
       );
     case 'SECTION':
       return (
-        <div className="flex items-center gap-3 my-1">
+        <div className="flex items-center gap-3 my-1" style={blockStyle}>
           <div className="flex-1 h-px bg-line-strong" />
-          <span className="font-display font-bold uppercase tracking-widest text-sm text-ink">
+          <span
+            className="font-display font-bold uppercase tracking-widest text-sm"
+            style={cfg.fg ? { color: cfg.fg } : { color: 'var(--ftx-ink)' }}
+          >
             {field.label}
           </span>
           <div className="flex-1 h-px bg-line-strong" />
@@ -248,7 +275,28 @@ function PresentationalBlock({ field }: { field: FormSnapshotField }) {
     case 'DIVIDER':
       return <div className="h-px bg-line-strong" />;
     case 'SPACER':
-      return <div className="h-full" />;
+      return <div className="h-full" style={cfg.bg ? { background: cfg.bg, borderRadius: 4 } : {}} />;
+    case 'IMAGE':
+      if (cfg.src) {
+        return (
+          <div style={blockStyle} className="h-full w-full">
+            <img
+              src={cfg.src}
+              alt={cfg.alt || field.label || 'Imagen'}
+              className="w-full h-full object-contain rounded"
+              style={{ maxHeight: '320px' }}
+            />
+            {field.helpText && (
+              <p className="text-[12px] text-muted mt-1 italic">{field.helpText}</p>
+            )}
+          </div>
+        );
+      }
+      return (
+        <div className="grid place-items-center rounded border border-dashed border-line-strong w-full h-full min-h-[100px] text-muted text-xs italic">
+          (Imagen no configurada)
+        </div>
+      );
     default:
       return null;
   }
@@ -300,7 +348,7 @@ function parseOptions(raw: string | null): string[] {
   }
 }
 
-const PRESENTATIONAL = new Set(['HEADING', 'PARAGRAPH', 'SECTION', 'DIVIDER', 'SPACER']);
+const PRESENTATIONAL = new Set(['HEADING', 'PARAGRAPH', 'SECTION', 'DIVIDER', 'SPACER', 'IMAGE']);
 const AUTO_FILL = new Set(['AUTO_USER_NAME', 'AUTO_EMPLOYEE_CODE', 'AUTO_POSITION', 'AUTO_AREA']);
 
 function isPresentational(t: string): boolean { return PRESENTATIONAL.has(t); }

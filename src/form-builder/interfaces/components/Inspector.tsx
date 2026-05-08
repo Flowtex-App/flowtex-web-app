@@ -1,6 +1,7 @@
-import { Trash2, Lock, Unlock } from 'lucide-react';
+import { Lock, Unlock, Image as ImageIcon } from 'lucide-react';
 import {
   FormField, slugifyFieldKey, type FieldWidth, type PageDef, type PageId,
+  parsePresentationalConfig, serializePresentationalConfig, type PresentationalConfig,
 } from '../../domain/models/FormField';
 import { FIELD_TYPES, FIELD_TYPE_META, type FieldType } from '../../domain/models/FieldType';
 
@@ -9,13 +10,14 @@ interface Props {
   pages: PageDef[];
   pageLabels?: Record<PageId, string>;
   onChange: (next: FormField) => void;
-  onDelete: () => void;
+  /** Mantained for backward compat; the delete control lives on each tile now. */
+  onDelete?: () => void;
 }
 
 const WIDTHS: FieldWidth[] = [3, 4, 6, 8, 9, 12];
 const ROW_OPTIONS = [1, 2, 3, 4];
 
-export function Inspector({ field, pages, pageLabels, onChange, onDelete }: Props) {
+export function Inspector({ field, pages, pageLabels, onChange }: Props) {
   if (!field) {
     return (
       <div className="h-full flex flex-col items-center justify-center px-6 text-center">
@@ -270,34 +272,7 @@ export function Inspector({ field, pages, pageLabels, onChange, onDelete }: Prop
         )}
 
         {meta.presentational && (
-          <div className="ftx-inspector-section pb-2">
-            <h4 className="ftx-inspector-title">Texto del bloque</h4>
-            <div className="ftx-inspector-row">
-              <label>Contenido</label>
-              {field.fieldType === 'PARAGRAPH' ? (
-                <textarea
-                  value={field.helpText ?? ''}
-                  onChange={(e) => update({ helpText: e.target.value })}
-                  className="ftx-input-flat resize-y leading-relaxed"
-                  rows={4}
-                  placeholder="Escribe varios párrafos de instrucción para el usuario. Pulsa Enter para saltos de línea."
-                />
-              ) : (
-                <input
-                  value={field.helpText ?? ''}
-                  onChange={(e) => update({ helpText: e.target.value })}
-                  className="ftx-input-flat"
-                  placeholder={
-                    field.fieldType === 'SECTION'
-                      ? 'Subtítulo / categoría'
-                      : field.fieldType === 'HEADING'
-                      ? 'Texto auxiliar bajo el encabezado'
-                      : ''
-                  }
-                />
-              )}
-            </div>
-          </div>
+          <PresentationalEditors field={field} update={update} />
         )}
 
         {/* Validation */}
@@ -329,18 +304,185 @@ export function Inspector({ field, pages, pageLabels, onChange, onDelete }: Prop
         )}
       </div>
 
-      {/* Footer */}
+      {/* Footer — sólo el id del field para referencia. El botón eliminar
+          ya está disponible en el toolbar de cada tile en el canvas. */}
       <div className="px-3 py-2.5 border-t border-line bg-cream flex items-center justify-between">
         <span className="font-mono text-[10px] text-muted">
           {field.id ? `#${field.id}` : 'sin guardar'}
         </span>
-        <button
-          onClick={onDelete}
-          className="ftx-btn ftx-btn-danger text-xs py-1 px-2"
-        >
-          <Trash2 size={12} /> Eliminar
-        </button>
+        <span className="font-mono text-[10px] text-muted/60">
+          {field.fieldType.toLowerCase()}
+        </span>
       </div>
     </div>
+  );
+}
+
+/**
+ * Editor de los bloques presentational. Cada tipo (HEADING, PARAGRAPH, SECTION,
+ * DIVIDER, SPACER, IMAGE) tiene controles de:
+ *   - Texto/contenido (cuando aplica)
+ *   - Color de fondo
+ *   - Color de texto (cuando aplica)
+ *   - URL de imagen + alt (solo IMAGE)
+ *
+ * Los colores e imagen src se persisten en `field.options` como JSON
+ * (ver parsePresentationalConfig en FormField.ts).
+ */
+function PresentationalEditors({
+  field,
+  update,
+}: {
+  field: FormField;
+  update: (patch: Parameters<FormField['with']>[0]) => void;
+}) {
+  const cfg = parsePresentationalConfig(field.options);
+
+  const updateConfig = (patch: Partial<PresentationalConfig>) => {
+    const next = { ...cfg, ...patch };
+    // Limpieza: si vacío string, lo borramos
+    if (patch.bg === '')  next.bg = undefined;
+    if (patch.fg === '')  next.fg = undefined;
+    if (patch.src === '') next.src = undefined;
+    if (patch.alt === '') next.alt = undefined;
+    update({ options: serializePresentationalConfig(next) });
+  };
+
+  const isImage = field.fieldType === 'IMAGE';
+  const isSpacerOrDivider = field.fieldType === 'SPACER' || field.fieldType === 'DIVIDER';
+
+  return (
+    <>
+      {/* Contenido textual: oculto para SPACER/DIVIDER/IMAGE (no aplica) */}
+      {!isSpacerOrDivider && !isImage && (
+        <div className="ftx-inspector-section pb-2">
+          <h4 className="ftx-inspector-title">Texto del bloque</h4>
+          <div className="ftx-inspector-row">
+            <label>Contenido</label>
+            {field.fieldType === 'PARAGRAPH' ? (
+              <textarea
+                value={field.helpText ?? ''}
+                onChange={(e) => update({ helpText: e.target.value })}
+                className="ftx-input-flat resize-y leading-relaxed"
+                rows={4}
+                placeholder="Escribe varios párrafos. Pulsa Enter para saltos de línea."
+              />
+            ) : (
+              <input
+                value={field.helpText ?? ''}
+                onChange={(e) => update({ helpText: e.target.value })}
+                className="ftx-input-flat"
+                placeholder={
+                  field.fieldType === 'SECTION'
+                    ? 'Subtítulo / categoría'
+                    : 'Texto auxiliar bajo el encabezado'
+                }
+              />
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* IMAGE: URL y alt */}
+      {isImage && (
+        <div className="ftx-inspector-section pb-2">
+          <h4 className="ftx-inspector-title flex items-center gap-1.5">
+            <ImageIcon size={12} className="text-brand" /> Imagen
+          </h4>
+          <div className="ftx-inspector-row">
+            <label>URL</label>
+            <input
+              value={cfg.src ?? ''}
+              onChange={(e) => updateConfig({ src: e.target.value })}
+              className="ftx-input-flat"
+              placeholder="https://ejemplo.com/imagen.png"
+              type="url"
+            />
+          </div>
+          <div className="ftx-inspector-row">
+            <label>Texto alt</label>
+            <input
+              value={cfg.alt ?? ''}
+              onChange={(e) => updateConfig({ alt: e.target.value })}
+              className="ftx-input-flat"
+              placeholder="Descripción para accesibilidad"
+            />
+          </div>
+          <div className="ftx-inspector-row">
+            <label>Pie de imagen</label>
+            <input
+              value={field.helpText ?? ''}
+              onChange={(e) => update({ helpText: e.target.value })}
+              className="ftx-input-flat"
+              placeholder="Texto opcional debajo"
+            />
+          </div>
+        </div>
+      )}
+
+      {/* Colores: para HEADING/PARAGRAPH/SECTION/SPACER/IMAGE (no DIVIDER) */}
+      {field.fieldType !== 'DIVIDER' && (
+        <div className="ftx-inspector-section pb-2">
+          <h4 className="ftx-inspector-title">Apariencia</h4>
+          <div className="ftx-inspector-row">
+            <label>Fondo</label>
+            <div className="flex items-center gap-1.5">
+              <input
+                type="color"
+                value={cfg.bg ?? '#ffffff'}
+                onChange={(e) => updateConfig({ bg: e.target.value })}
+                className="size-8 rounded border border-line cursor-pointer p-0"
+                title="Color de fondo"
+              />
+              <input
+                value={cfg.bg ?? ''}
+                onChange={(e) => updateConfig({ bg: e.target.value })}
+                placeholder="sin color"
+                className="ftx-input-flat font-mono text-[11px] flex-1"
+              />
+              {cfg.bg && (
+                <button
+                  onClick={() => updateConfig({ bg: '' })}
+                  className="text-[10px] text-muted hover:text-brand px-1.5"
+                  title="Quitar fondo"
+                >
+                  ✕
+                </button>
+              )}
+            </div>
+          </div>
+
+          {field.fieldType !== 'SPACER' && field.fieldType !== 'IMAGE' && (
+            <div className="ftx-inspector-row">
+              <label>Texto</label>
+              <div className="flex items-center gap-1.5">
+                <input
+                  type="color"
+                  value={cfg.fg ?? '#111827'}
+                  onChange={(e) => updateConfig({ fg: e.target.value })}
+                  className="size-8 rounded border border-line cursor-pointer p-0"
+                  title="Color de texto"
+                />
+                <input
+                  value={cfg.fg ?? ''}
+                  onChange={(e) => updateConfig({ fg: e.target.value })}
+                  placeholder="por defecto"
+                  className="ftx-input-flat font-mono text-[11px] flex-1"
+                />
+                {cfg.fg && (
+                  <button
+                    onClick={() => updateConfig({ fg: '' })}
+                    className="text-[10px] text-muted hover:text-brand px-1.5"
+                    title="Quitar color de texto"
+                  >
+                    ✕
+                  </button>
+                )}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+    </>
   );
 }

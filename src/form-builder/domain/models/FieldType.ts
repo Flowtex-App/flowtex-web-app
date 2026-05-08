@@ -5,6 +5,7 @@ export const FIELD_TYPES = [
   'SECTION',
   'DIVIDER',
   'SPACER',
+  'IMAGE',
 
   // Auto-fill (presentational, resolved with current user metadata)
   'AUTO_USER_NAME',
@@ -64,6 +65,7 @@ export const FIELD_TYPE_META: Record<
   SECTION:    { label: 'Sección',     glyph: '§',  description: 'Banda divisoria con título', group: 'LAYOUT',    supportsOptions: false, presentational: true,  autoFill: false, defaultWidth: 12 },
   DIVIDER:    { label: 'Divisor',     glyph: '—',  description: 'Línea horizontal',           group: 'LAYOUT',    supportsOptions: false, presentational: true,  autoFill: false, defaultWidth: 12 },
   SPACER:     { label: 'Espaciador',  glyph: '◻',  description: 'Hueco vacío en el grid',     group: 'LAYOUT',    supportsOptions: false, presentational: true,  autoFill: false, defaultWidth: 4  },
+  IMAGE:      { label: 'Imagen',      glyph: '🖼',  description: 'Imagen por URL o subida',    group: 'LAYOUT',    supportsOptions: false, presentational: true,  autoFill: false, defaultWidth: 6  },
 
   AUTO_USER_NAME:     { label: 'Nombre completo (auto)',    glyph: '👤', description: 'Se rellena con el nombre del usuario', group: 'AUTO', supportsOptions: false, presentational: false, autoFill: true, defaultWidth: 6 },
   AUTO_EMPLOYEE_CODE: { label: 'Código de empleado (auto)', glyph: 'C#', description: 'Se rellena con el código del usuario', group: 'AUTO', supportsOptions: false, presentational: false, autoFill: true, defaultWidth: 4 },

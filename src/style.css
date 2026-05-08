@@ -659,24 +659,28 @@ body {
   /* ---------- Floating chatbot ---------- */
   .ftx-bot-bubble {
     position: fixed;
-    right: 1.25rem;
-    bottom: 1.25rem;
+    right: 1.5rem;
+    bottom: 1.5rem;
     z-index: 60;
-    width: 3.4rem;
-    height: 3.4rem;
+    width: 4.25rem;
+    height: 4.25rem;
     border-radius: 50%;
     background: var(--ftx-brand);
     color: #fff;
     display: grid;
     place-items: center;
     cursor: pointer;
-    border: 2px solid var(--ftx-ink);
-    box-shadow: 4px 4px 0 0 var(--ftx-ink);
+    border: 3px solid var(--ftx-ink);
+    box-shadow: 5px 5px 0 0 var(--ftx-ink);
     transition: transform 100ms ease, box-shadow 100ms ease;
   }
   .ftx-bot-bubble:hover {
-    transform: translate(-1px, -1px);
-    box-shadow: 5px 5px 0 0 var(--ftx-ink);
+    transform: translate(-2px, -2px);
+    box-shadow: 7px 7px 0 0 var(--ftx-ink);
+  }
+  .ftx-bot-bubble svg {
+    width: 28px;
+    height: 28px;
   }
   .ftx-bot-window {
     position: fixed;
@@ -777,27 +781,21 @@ body {
   }
 }
 
-/* ─── Drop cells (canvas grid) ──────────────────────────────────────────
-   Cada celda 1×1 del grid 12-col es un drop target. Invisible cuando no
-   hay drag activo; durante drag muestra un outline tenue, y la celda
-   bajo el cursor se resalta con el color brand.
+/* ─── Drop preview overlay ──────────────────────────────────────────────
+   Las celdas del canvas-grid son drop targets invisibles. El preview se
+   pinta como UN SOLO overlay que cubre exactamente el ancho × alto del
+   field que está siendo arrastrado, sobre la celda bajo el cursor.
 */
-.ftx-drop-cell-idle {
-  /* Fuera de drag: las celdas existen para registrar dnd-kit pero no se ven */
-  visibility: hidden;
-}
-.ftx-drop-cell {
-  /* Durante drag: outline punteado tenue para mostrar la grilla */
-  border: 1px dashed var(--ftx-line);
-  background: transparent;
-  min-height: 80px;
-  transition: background 120ms ease, border-color 120ms ease;
-}
-.ftx-drop-cell-active {
-  /* Celda destino del drag: highlight brand */
+.ftx-drop-preview {
   border: 2px solid var(--ftx-brand);
   background: var(--ftx-brand-tint);
   box-shadow: 0 0 0 1px var(--ftx-brand) inset;
+  border-radius: 6px;
+  transition:
+    grid-column-start 100ms ease,
+    grid-row-start 100ms ease,
+    background 120ms ease,
+    border-color 120ms ease;
 }
 
 /* ─── Print stylesheet ──────────────────────────────────────────────────

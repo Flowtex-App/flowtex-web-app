@@ -1,5 +1,7 @@
-import { Paperclip, PenLine, User as UserIcon, BadgeCheck, Building2, Briefcase } from 'lucide-react';
-import { FormField } from '../../domain/models/FormField';
+import {
+  Paperclip, PenLine, User as UserIcon, BadgeCheck, Building2, Briefcase, Image as ImageIcon,
+} from 'lucide-react';
+import { FormField, parsePresentationalConfig } from '../../domain/models/FormField';
 import { FIELD_TYPE_META } from '../../domain/models/FieldType';
 import { useAuthStore } from '@/iam/interfaces/stores/auth.store';
 
@@ -122,18 +124,31 @@ function InputRender({ field, compact }: { field: FormField; compact: boolean })
 }
 
 function PresentationalRender({ field, compact }: { field: FormField; compact: boolean }) {
+  const cfg = parsePresentationalConfig(field.options);
+
+  // Estilo de fondo y color de texto opcional. Si hay bg, ponemos padding
+  // y border-radius para que se vea como bloque coloreado.
+  const blockStyle: React.CSSProperties = {
+    ...(cfg.bg ? { background: cfg.bg, padding: '12px 14px', borderRadius: 6 } : {}),
+    ...(cfg.fg ? { color: cfg.fg } : {}),
+  };
+
   switch (field.fieldType) {
     case 'HEADING':
       return (
-        <div className="px-1">
+        <div style={blockStyle}>
           <div className="font-mono text-[9px] uppercase tracking-widest text-muted mb-0.5">
             heading
           </div>
-          <h3 className={`font-display font-bold text-ink leading-tight ${compact ? 'text-base' : 'text-xl'}`}>
+          <h3
+            className={`font-display font-bold leading-tight ${compact ? 'text-base' : 'text-xl'}`}
+            style={cfg.fg ? { color: cfg.fg } : undefined}
+          >
             {field.label || 'Encabezado de sección'}
           </h3>
           {field.helpText && (
-            <p className="text-[11px] text-muted mt-0.5 italic font-editorial">
+            <p className="text-[11px] mt-0.5 italic font-editorial"
+               style={{ color: cfg.fg ? cfg.fg : 'var(--ftx-muted)', opacity: 0.85 }}>
               {field.helpText}
             </p>
           )}
@@ -141,24 +156,29 @@ function PresentationalRender({ field, compact }: { field: FormField; compact: b
       );
     case 'PARAGRAPH':
       return (
-        <div className="px-1">
+        <div style={blockStyle}>
           <div className="font-mono text-[9px] uppercase tracking-widest text-muted mb-0.5">
             parrafo
           </div>
-          <p className={`text-ink-2 leading-relaxed whitespace-pre-line break-words ${compact ? 'text-[11px]' : 'text-sm'}`}>
+          <p
+            className={`leading-relaxed whitespace-pre-line break-words ${compact ? 'text-[11px]' : 'text-sm'}`}
+            style={cfg.fg ? { color: cfg.fg } : { color: 'var(--ftx-ink-2)' }}
+          >
             {field.helpText || field.label || 'Texto explicativo para el usuario que llenará este formulario.'}
           </p>
         </div>
       );
     case 'SECTION':
       return (
-        <div className="flex items-center gap-3 px-1 py-0.5">
+        <div className="flex items-center gap-3 px-1 py-0.5" style={blockStyle}>
           <div className="flex-1 h-px bg-line-strong" />
           <div className="text-center">
-            <div className="font-mono text-[9px] uppercase tracking-widest text-brand mb-0.5">
+            <div className="font-mono text-[9px] uppercase tracking-widest mb-0.5"
+                 style={{ color: cfg.fg ? cfg.fg : 'var(--ftx-brand)' }}>
               § sección
             </div>
-            <div className={`font-display font-bold uppercase tracking-wider text-ink ${compact ? 'text-[11px]' : 'text-sm'}`}>
+            <div className={`font-display font-bold uppercase tracking-wider ${compact ? 'text-[11px]' : 'text-sm'}`}
+                 style={cfg.fg ? { color: cfg.fg } : { color: 'var(--ftx-ink)' }}>
               {field.label || 'Nueva sección'}
             </div>
           </div>
@@ -167,7 +187,7 @@ function PresentationalRender({ field, compact }: { field: FormField; compact: b
       );
     case 'DIVIDER':
       return (
-        <div className="flex items-center gap-2 px-1">
+        <div className="flex items-center gap-2 px-1" style={blockStyle}>
           <div className="flex-1 h-px bg-line-strong" />
           <span className="font-mono text-[9px] uppercase tracking-widest text-muted">divisor</span>
           <div className="flex-1 h-px bg-line-strong" />
@@ -177,11 +197,46 @@ function PresentationalRender({ field, compact }: { field: FormField; compact: b
       return (
         <div
           className="grid place-items-center text-[10px] font-mono uppercase tracking-widest text-muted/60 italic h-full min-h-[36px] rounded border border-dashed border-line"
-          style={{ background: 'transparent' }}
+          style={{ background: cfg.bg ?? 'transparent' }}
         >
           {compact ? '◻' : '◻ espacio'}
         </div>
       );
+    case 'IMAGE': {
+      const src = cfg.src;
+      const alt = cfg.alt || field.label || 'Imagen';
+      if (src) {
+        return (
+          <div style={blockStyle} className="h-full w-full">
+            <img
+              src={src}
+              alt={alt}
+              className="w-full h-full object-contain rounded"
+              style={{ maxHeight: compact ? '120px' : '320px' }}
+            />
+            {field.helpText && (
+              <p className="text-[10px] text-muted mt-1 italic"
+                 style={cfg.fg ? { color: cfg.fg } : undefined}>
+                {field.helpText}
+              </p>
+            )}
+          </div>
+        );
+      }
+      return (
+        <div
+          className="grid place-items-center rounded border border-dashed border-line-strong w-full h-full min-h-[100px]"
+          style={{ background: cfg.bg ?? 'var(--ftx-cream)' }}
+        >
+          <div className="text-center">
+            <ImageIcon size={compact ? 16 : 24} className="mx-auto text-muted" />
+            <p className="text-[10px] text-muted mt-1 italic">
+              {compact ? 'imagen' : 'Pega la URL de la imagen en el inspector'}
+            </p>
+          </div>
+        </div>
+      );
+    }
     default:
       return null;
   }

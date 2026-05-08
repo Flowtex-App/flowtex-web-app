@@ -20,7 +20,7 @@ export function FormPreview({ title, description, fields, page }: Props) {
       <div className="ftx-form-header px-4 py-3 flex items-center justify-between gap-3">
         <div className="min-w-0">
           <div className="text-[9px] font-mono uppercase tracking-widest text-white/70">
-            preview · {pageMeta ? String(pageMeta.index + 1).padStart(2, '0') : '01'} {pageMeta?.label}
+            previsualización · {pageMeta ? String(pageMeta.index + 1).padStart(2, '0') : '01'} {pageMeta?.label}
           </div>
           <h2 className="font-editorial italic text-xl leading-tight truncate">
             {title || 'Nuevo formulario'}

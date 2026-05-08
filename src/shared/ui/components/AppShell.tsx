@@ -216,12 +216,6 @@ export function AppShell({ children, fitViewport = false }: AppShellProps) {
           </div>
         )}
 
-        <div
-          className="px-4 py-1.5 text-[9px] text-muted/70 font-mono"
-          style={{ borderTop: '1px solid var(--ftx-line)' }}
-        >
-          v0.2.0 · claro perú
-        </div>
       </aside>
 
       {mobileOpen && (
