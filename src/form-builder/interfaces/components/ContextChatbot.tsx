@@ -131,8 +131,9 @@ export function ContextChatbot({
         className="ftx-bot-bubble"
         aria-label="Abrir asistente"
         title="Asistente de contexto"
+        data-tour="chatbot"
       >
-        <Bot size={22} />
+        <Bot size={28} />
       </button>
     );
   }

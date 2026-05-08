@@ -1,13 +1,13 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams, useBlocker } from 'react-router-dom';
 import {
   ArrowLeft, Save, Send, MousePointerClick, Eye, SlidersHorizontal, Layers,
-  GitBranch, FileText, Rocket,
+  GitBranch, FileText, Rocket, HelpCircle,
 } from 'lucide-react';
 import {
   DndContext, DragOverlay, KeyboardSensor, PointerSensor,
   useSensor, useSensors, useDroppable,
-  type DragEndEvent, type DragStartEvent,
+  type DragEndEvent, type DragStartEvent, type DragOverEvent,
 } from '@dnd-kit/core';
 import {
   SortableContext, rectSortingStrategy, sortableKeyboardCoordinates, arrayMove,
@@ -28,9 +28,10 @@ import { Inspector } from '../components/Inspector';
 import { StepTabs } from '../components/StepTabs';
 import { ContextChatbot } from '../components/ContextChatbot';
 import { useFormsStore } from '../stores/forms.store';
-import { WorkflowCanvas } from '@/workflow/interfaces/components/WorkflowCanvas';
+import { WorkflowCanvas, type WorkflowCanvasHandle } from '@/workflow/interfaces/components/WorkflowCanvas';
 import type { FormContext } from '@/workflow/domain/models/FormContext';
 import { useWorkflowStore } from '@/workflow/interfaces/stores/workflow.store';
+import { startFormBuilderTour, maybeAutoStartFormBuilderTour } from '@/shared/ui/tour/tours';
 
 const CANVAS_DROP_ID = 'canvas-drop-zone';
 type RightTab = 'inspector' | 'preview';
@@ -48,68 +49,43 @@ const MIN_ROWS = 10;
 const EXTRA_TRAIL_ROWS = 4;
 
 /**
- * Una celda del grid que actúa como drop target. Se renderiza siempre (para
- * que dnd-kit la registre y detecte hover por bounding rect), pero solo es
- * visible/interactiva durante un drag activo.
+ * Una celda del grid que actúa como drop target invisible.
+ *
+ * No tiene estilo propio: dnd-kit la usa solo para detectar bajo qué (col, row)
+ * está el cursor. El highlight visual se renderiza como un overlay del padre
+ * que cubre el área (col..col+W-1, row..row+R-1) — así no se contamina la UI
+ * con bordes en cada celda.
  */
-function DropCell({
-  row, col, dragging, dragWidth,
-}: {
-  row: number;
-  col: number;
-  dragging: boolean;
-  /** Ancho del field que se está arrastrando (para resaltar las celdas adyacentes). */
-  dragWidth: number;
-}) {
+function DropCell({ row, col }: { row: number; col: number }) {
   const id = `cell:r${row}c${col}`;
-  const { isOver, setNodeRef } = useDroppable({ id, data: { row, col } });
-
-  // Cuando esta celda es la "head" del drop (isOver), también se highlightean
-  // las celdas a su derecha hasta cubrir dragWidth, para que el usuario vea
-  // visualmente cuánto espacio va a ocupar el field.
-  // (Las celdas adyacentes calculan esto leyendo isOver de su propio hook,
-  // así que aquí solo nos importa la "cabeza".)
+  const { setNodeRef } = useDroppable({ id, data: { row, col } });
   return (
     <div
       ref={setNodeRef}
-      style={{
-        gridColumnStart: col,
-        gridRowStart: row,
-        zIndex: 0,
-        pointerEvents: dragging ? 'auto' : 'none',
-      }}
-      className={[
-        'rounded transition-colors',
-        dragging ? 'ftx-drop-cell' : 'ftx-drop-cell-idle',
-        dragging && isOver ? 'ftx-drop-cell-active' : '',
-      ].join(' ')}
-      data-row={row}
-      data-col={col}
-      data-dragwidth={dragWidth}
+      style={{ gridColumnStart: col, gridRowStart: row, zIndex: 0 }}
+      data-cell={`${row}-${col}`}
     />
   );
 }
 
 /**
- * El canvas: grid 12 cols × N filas con celdas droppable.
- *
- * Cada celda se posiciona en (col, row) con CSS grid. Los fields se posicionan
- * encima usando gridColumnStart/gridRowStart explícitos cuando tienen
- * coordenadas; los que no tienen (legacy) caen al modo de auto-flow.
+ * El canvas: grid 12 cols × N filas. Las celdas son drop targets invisibles
+ * para dnd-kit; el highlight del área de drop se dibuja como un overlay
+ * que cubre exactamente ancho×alto del field.
  */
 function CanvasGrid({
-  fields, children, dragging, dragWidth, pageLabel,
+  fields, children, dropHead, dragWidth, dragRows, pageLabel,
 }: {
   fields: FormField[];
   children: React.ReactNode;
-  dragging: boolean;
+  /** Celda bajo el cursor; null cuando no hay drag o no está sobre celdas. */
+  dropHead: { row: number; col: number } | null;
   dragWidth: number;
+  dragRows: number;
   pageLabel: string;
 }) {
   const { isOver: isOverGrid, setNodeRef } = useDroppable({ id: CANVAS_DROP_ID });
 
-  // Calcula cuántas filas necesitamos: la fila más baja ocupada por un field
-  // posicionado, +EXTRA para drop extra abajo, y un piso de MIN_ROWS.
   const rowsCount = useMemo(() => {
     const placedRows = fields
       .filter((f) => f.rowStart != null)
@@ -119,33 +95,51 @@ function CanvasGrid({
     return Math.max(MIN_ROWS, used + EXTRA_TRAIL_ROWS);
   }, [fields]);
 
+  // Recortamos el ancho/alto de la preview si excede los límites del grid
+  // (col 10 con width=6 → preview de width=3).
+  const previewWidth = dropHead
+    ? Math.min(dragWidth, 12 - dropHead.col + 1)
+    : dragWidth;
+  const previewRows = dropHead
+    ? Math.min(dragRows, rowsCount - dropHead.row + 1)
+    : dragRows;
+
   return (
     <div
       ref={setNodeRef}
       className={[
         'relative grid grid-cols-12 gap-2 p-3 transition-colors',
-        isOverGrid ? 'bg-brand-tint/30' : '',
+        isOverGrid && !dropHead ? 'bg-brand-tint/20' : '',
       ].join(' ')}
       style={{
         gridTemplateRows: `repeat(${rowsCount}, minmax(${GRID_ROW_PX}px, auto))`,
       }}
     >
-      {/* Layer de DropCells. Siempre montadas (para dnd-kit), pero invisibles
-          fuera de drag para no contaminar la UI. */}
+      {/* Drop targets invisibles, una por celda */}
       {Array.from({ length: rowsCount }).map((_, r) =>
         Array.from({ length: 12 }).map((_, c) => (
-          <DropCell
-            key={`r${r + 1}c${c + 1}`}
-            row={r + 1}
-            col={c + 1}
-            dragging={dragging}
-            dragWidth={dragWidth}
-          />
+          <DropCell key={`r${r + 1}c${c + 1}`} row={r + 1} col={c + 1} />
         )),
       )}
 
-      {/* Empty-state hint cuando no hay nada todavía y no hay drag */}
-      {fields.length === 0 && !dragging && (
+      {/* Overlay de la zona de drop: cubre el ancho y alto reales del field
+          que se está arrastrando. Solo aparece cuando el cursor está sobre
+          una celda (dropHead != null). */}
+      {dropHead && (
+        <div
+          className="ftx-drop-preview pointer-events-none"
+          style={{
+            gridColumnStart: dropHead.col,
+            gridColumnEnd: `span ${previewWidth}`,
+            gridRowStart: dropHead.row,
+            gridRowEnd: `span ${previewRows}`,
+            zIndex: 4,
+          }}
+        />
+      )}
+
+      {/* Empty-state hint */}
+      {fields.length === 0 && !dropHead && (
         <div
           className="pointer-events-none text-center max-w-sm"
           style={{
@@ -162,9 +156,8 @@ function CanvasGrid({
             <span className="text-brand">{pageLabel}</span> sin campos
           </p>
           <p className="text-xs text-muted mt-1.5 leading-relaxed">
-            Arrastra cualquier elemento desde la paleta izquierda hasta la
-            celda donde quieras colocarlo. Puedes dejar filas vacías como
-            espaciadores.
+            Arrastra desde la paleta hasta la celda donde quieras colocarlo.
+            Puedes dejar filas vacías como espaciadores.
           </p>
         </div>
       )}
@@ -196,9 +189,21 @@ export default function FormBuilderPage() {
   const [activePage, setActivePage] = useState<PageId>(DEFAULT_PAGE_ID);
   const [mainTab, setMainTab] = useState<MainTab>('structure');
   const [publishingAll, setPublishingAll] = useState(false);
+  const [dropHead, setDropHead] = useState<{ row: number; col: number } | null>(null);
+  const [dirty, setDirty] = useState(false);
 
   const publishWorkflowOne = useWorkflowStore((s) => s.publishOne);
   const currentWorkflow = useWorkflowStore((s) => s.current);
+  const workflowCanvasRef = useRef<WorkflowCanvasHandle | null>(null);
+
+  // Snapshot del último estado guardado, para detectar cambios sin guardar.
+  const savedSnapshot = useRef<string>('');
+
+  // Bloquea navegación interna (sidebar, "Volver", etc.) si hay cambios sin
+  // guardar. El componente renderiza un modal cuando blocker.state === 'blocked'.
+  const blocker = useBlocker(({ currentLocation, nextLocation }) =>
+    dirty && currentLocation.pathname !== nextLocation.pathname,
+  );
 
   const canvasInnerRef = useRef<HTMLDivElement | null>(null);
   const [canvasWidthPx, setCanvasWidthPx] = useState(900);
@@ -242,6 +247,81 @@ export default function FormBuilderPage() {
       setActivePage(pages[0]?.id ?? DEFAULT_PAGE_ID);
     }
   }, [fields, activePage]);
+
+  // Snapshot helper — produce el mismo string para el mismo state. Lo usamos
+  // tanto al cargar (para fijar la baseline) como al detectar cambios.
+  const snapshot = (
+    t: string, d: string, c: string, fs: FormField[],
+  ): string => JSON.stringify({
+    title: t,
+    description: d,
+    context: c,
+    fields: fs.map((f) => ({
+      id: f.id ?? null,
+      label: f.label,
+      fieldKey: f.fieldKey,
+      fieldType: f.fieldType,
+      required: f.required,
+      placeholder: f.placeholder,
+      helpText: f.rawHelpText,
+      position: f.position,
+      width: f.width,
+      rows: f.rows,
+      colStart: f.colStart,
+      rowStart: f.rowStart,
+      options: f.options,
+      page: f.page,
+    })),
+  });
+
+  // Cuando se carga el form del backend (o estamos en modo nuevo), fijamos el
+  // baseline del snapshot. Dirty empieza en false.
+  useEffect(() => {
+    if (isNew) {
+      savedSnapshot.current = snapshot('', '', '', []);
+      setDirty(false);
+    }
+  }, [isNew]);
+
+  useEffect(() => {
+    if (current && !isNew) {
+      savedSnapshot.current = snapshot(
+        current.title,
+        current.description ?? '',
+        current.context ?? '',
+        [...current.fields],
+      );
+      setDirty(false);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [current, isNew]);
+
+  // Compara el state local contra el baseline; si difiere, marca dirty.
+  useEffect(() => {
+    setDirty(snapshot(title, description, context, fields) !== savedSnapshot.current);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [title, description, context, fields]);
+
+  const refreshSavedSnapshot = () => {
+    savedSnapshot.current = snapshot(title, description, context, fields);
+    setDirty(false);
+  };
+
+  // Aviso nativo del navegador al cerrar/recargar con cambios pendientes.
+  useEffect(() => {
+    if (!dirty) return;
+    const handler = (e: BeforeUnloadEvent) => {
+      e.preventDefault();
+      e.returnValue = '';
+    };
+    window.addEventListener('beforeunload', handler);
+    return () => window.removeEventListener('beforeunload', handler);
+  }, [dirty]);
+
+  // Auto-arranca el tour la primera vez que un usuario entra al editor.
+  useEffect(() => {
+    maybeAutoStartFormBuilderTour();
+  }, []);
 
   const pages = useMemo(() => listPages(fields), [fields]);
   const visibleFields = useMemo(
@@ -296,10 +376,23 @@ export default function FormBuilderPage() {
     }
   };
 
+  const handleDragOver = (event: DragOverEvent) => {
+    const overId = event.over?.id;
+    if (typeof overId === 'string' && overId.startsWith('cell:')) {
+      const data = event.over?.data.current as { row?: number; col?: number } | undefined;
+      if (data?.row && data?.col) {
+        setDropHead({ row: data.row, col: data.col });
+        return;
+      }
+    }
+    setDropHead(null);
+  };
+
   const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event;
     setActiveDragType(null);
     setActiveReorderId(null);
+    setDropHead(null);
     if (!over) return;
 
     const activeId = String(active.id);
@@ -425,6 +518,16 @@ export default function FormBuilderPage() {
         id: isNew ? undefined : formId!,
         draft: { title, description, context, fields },
       });
+      // Si la pestaña Workflow está montada (ref existe), guarda también el
+      // workflow en la misma operación. Un click → guarda todo.
+      if (workflowCanvasRef.current) {
+        try {
+          await workflowCanvasRef.current.save();
+        } catch {
+          /* el WorkflowCanvas ya muestra su propio error */
+        }
+      }
+      refreshSavedSnapshot();
       setSavedNotice('Cambios guardados');
       if (isNew) navigate(`/forms/${saved.id}`, { replace: true });
     } catch {
@@ -501,7 +604,12 @@ export default function FormBuilderPage() {
 
   return (
     <AppShell fitViewport>
-      <DndContext sensors={sensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
+      <DndContext
+        sensors={sensors}
+        onDragStart={handleDragStart}
+        onDragOver={handleDragOver}
+        onDragEnd={handleDragEnd}
+      >
         <div className="h-full flex flex-col min-h-0">
           {/* Top builder bar */}
           <div
@@ -553,7 +661,22 @@ export default function FormBuilderPage() {
               className="hidden md:block ftx-input-flat !text-xs !py-1 max-w-[280px]"
             />
 
-            <Button onClick={onSave} disabled={saving} icon={<Save size={14} />} className="text-xs py-1.5 px-3">
+            <button
+              onClick={() => startFormBuilderTour()}
+              className="ftx-icon-btn"
+              title="Tour guiado del editor"
+              aria-label="Ayuda"
+            >
+              <HelpCircle size={14} />
+            </button>
+
+            <Button
+              onClick={onSave}
+              disabled={saving}
+              icon={<Save size={14} />}
+              className="text-xs py-1.5 px-3"
+              data-tour="save"
+            >
               {saving ? 'Guardando...' : 'Guardar'}
             </Button>
             {!isNew && current?.status !== 'PUBLISHED' && (
@@ -574,30 +697,32 @@ export default function FormBuilderPage() {
             )}
           </div>
 
-          {/* Main tabs: Estructura | Aprobaciones — visibles siempre */}
+          {/* Main tabs: Formulario | Workflow — visibles siempre, con contraste alto */}
           <div
-            className="flex shrink-0 px-4"
-            style={{ background: 'var(--ftx-paper)', borderBottom: '1px solid var(--ftx-line)' }}
+            data-tour="tabs"
+            className="flex shrink-0 px-4 gap-1"
+            style={{ background: 'var(--ftx-cream)', borderBottom: '1px solid var(--ftx-line-strong)' }}
           >
             <MainTabBtn
               active={mainTab === 'structure'}
               onClick={() => setMainTab('structure')}
-              icon={<FileText size={13} />}
-              label="Estructura"
+              icon={<FileText size={15} />}
+              label="Formulario"
               hint={`${fields.length} campos`}
             />
             <MainTabBtn
               active={mainTab === 'approval'}
               onClick={() => setMainTab('approval')}
-              icon={<GitBranch size={13} />}
-              label="Aprobaciones"
+              icon={<GitBranch size={15} />}
+              label="Workflow"
+              dataTour="workflow-tab"
               hint={
                 isNew
                   ? 'guarda primero'
                   : current?.workflowId
                     ? (currentWorkflow?.id === current.workflowId
                         ? `${currentWorkflow.steps.length} pasos`
-                        : 'workflow linkeado')
+                        : 'enlazado')
                     : 'sin flujo'
               }
               accent={
@@ -635,6 +760,7 @@ export default function FormBuilderPage() {
           <div className="flex-1 grid grid-cols-1 lg:grid-cols-[260px_minmax(0,1fr)_360px] xl:grid-cols-[280px_minmax(0,1fr)_400px] gap-0 min-h-0 overflow-hidden">
             {/* LEFT: Palette */}
             <aside
+              data-tour="palette"
               className="hidden lg:flex flex-col overflow-hidden"
               style={{ borderRight: '1px solid var(--ftx-line)', background: 'var(--ftx-bg)' }}
             >
@@ -657,6 +783,7 @@ export default function FormBuilderPage() {
 
             {/* CENTER: Canvas */}
             <section
+              data-tour="canvas"
               className="flex flex-col overflow-hidden"
               style={{ background: 'var(--ftx-canvas)' }}
             >
@@ -687,7 +814,7 @@ export default function FormBuilderPage() {
                       <CanvasGrid
                         fields={visibleFields}
                         pageLabel={activePageLabel}
-                        dragging={activeDragType !== null || activeReorderId !== null}
+                        dropHead={dropHead}
                         dragWidth={
                           activeDragType
                             ? (FIELD_TYPE_META[activeDragType].defaultWidth as number)
@@ -695,6 +822,14 @@ export default function FormBuilderPage() {
                                 const idx = sortableIds.indexOf(activeReorderId ?? '');
                                 return idx >= 0 ? visibleFields[idx]?.width ?? 1 : 1;
                               })()
+                        }
+                        dragRows={
+                          activeReorderId
+                            ? (() => {
+                                const idx = sortableIds.indexOf(activeReorderId);
+                                return idx >= 0 ? visibleFields[idx]?.rows ?? 1 : 1;
+                              })()
+                            : 1
                         }
                       >
                         {visibleFields.map((field, idx) => (
@@ -739,6 +874,7 @@ export default function FormBuilderPage() {
 
             {/* RIGHT: Inspector / Preview */}
             <aside
+              data-tour="inspector"
               className="hidden lg:flex flex-col overflow-hidden"
               style={{ borderLeft: '1px solid var(--ftx-line)', background: 'var(--ftx-paper)' }}
             >
@@ -759,7 +895,7 @@ export default function FormBuilderPage() {
                   active={rightTab === 'preview'}
                   onClick={() => setRightTab('preview')}
                   icon={<Eye size={12} />}
-                  label="Preview"
+                  label="Previsualización"
                 />
               </div>
               <div className="flex-1 overflow-hidden">
@@ -838,11 +974,12 @@ export default function FormBuilderPage() {
                 </div>
               ) : (
                 <WorkflowCanvas
+                  ref={workflowCanvasRef}
                   workflowId={current?.workflowId ?? null}
                   formContext={formContext}
                   defaultName={title ? `Flujo de "${title}"` : undefined}
                   onSaved={onWorkflowSaved}
-                  hideToolbar={false}
+                  hideToolbar
                 />
               )}
             </div>
@@ -890,7 +1027,74 @@ export default function FormBuilderPage() {
         activePage={activePage}
         onPick={addFieldFromAi}
       />
+
+      {/* Modal de confirmación al salir con cambios sin guardar */}
+      {blocker.state === 'blocked' && (
+        <UnsavedChangesModal
+          onCancel={() => blocker.reset?.()}
+          onLeave={() => blocker.proceed?.()}
+          onSave={async () => {
+            await onSave();
+            blocker.proceed?.();
+          }}
+          saving={saving}
+        />
+      )}
     </AppShell>
+  );
+}
+
+function UnsavedChangesModal({
+  onCancel, onLeave, onSave, saving,
+}: {
+  onCancel: () => void;
+  onLeave: () => void;
+  onSave: () => void;
+  saving: boolean;
+}) {
+  return (
+    <div
+      role="dialog"
+      aria-modal="true"
+      onClick={onCancel}
+      style={{
+        position: 'fixed', inset: 0, zIndex: 200,
+        display: 'grid', placeItems: 'center',
+        background: 'rgba(0,0,0,0.5)',
+      }}
+    >
+      <div
+        onClick={(e) => e.stopPropagation()}
+        className="ftx-card-elev p-6 max-w-md w-full"
+        style={{ background: 'var(--ftx-paper)' }}
+      >
+        <h2 className="font-display font-bold text-lg text-ink">
+          ¿Salir sin guardar?
+        </h2>
+        <p className="text-sm text-muted mt-2 leading-relaxed">
+          Tienes cambios pendientes en este formulario. Si sales ahora, se
+          perderán. Puedes guardarlos antes o descartarlos.
+        </p>
+        <div className="mt-5 flex flex-wrap gap-2 justify-end">
+          <button onClick={onCancel} className="ftx-btn">
+            Cancelar
+          </button>
+          <button
+            onClick={onLeave}
+            className="ftx-btn !text-brand !border-brand/30"
+          >
+            Salir sin guardar
+          </button>
+          <button
+            onClick={onSave}
+            disabled={saving}
+            className="ftx-btn ftx-btn-primary"
+          >
+            {saving ? 'Guardando...' : 'Guardar y salir'}
+          </button>
+        </div>
+      </div>
+    </div>
   );
 }
 
@@ -921,7 +1125,7 @@ function TabBtn({
 }
 
 function MainTabBtn({
-  active, onClick, icon, label, hint, accent,
+  active, onClick, icon, label, hint, accent, dataTour,
 }: {
   active: boolean;
   onClick: () => void;
@@ -929,24 +1133,38 @@ function MainTabBtn({
   label: string;
   hint?: string;
   accent?: string;
+  dataTour?: string;
 }) {
+  const color = accent ?? 'var(--ftx-brand)';
   return (
     <button
       onClick={onClick}
+      data-tour={dataTour}
       className={[
-        'px-5 py-2.5 text-sm flex items-center gap-2 transition-colors',
-        active ? 'text-ink' : 'text-muted hover:text-ink',
+        'px-5 py-3 flex items-center gap-2.5 transition-colors relative',
+        'rounded-t-md',
+        active ? 'text-ink' : 'text-muted hover:text-ink-2',
       ].join(' ')}
       style={{
-        borderBottom: active
-          ? `2px solid ${accent ?? 'var(--ftx-brand)'}`
-          : '2px solid transparent',
+        background: active ? 'var(--ftx-paper)' : 'transparent',
+        borderTop: active ? `3px solid ${color}` : '3px solid transparent',
+        borderLeft: active ? '1px solid var(--ftx-line-strong)' : '1px solid transparent',
+        borderRight: active ? '1px solid var(--ftx-line-strong)' : '1px solid transparent',
+        marginBottom: active ? '-1px' : '0',
+        boxShadow: active ? '0 -2px 4px rgba(0,0,0,0.04)' : 'none',
       }}
     >
-      <span style={{ color: active ? (accent ?? 'var(--ftx-brand)') : 'inherit' }}>{icon}</span>
-      <span className="font-display font-bold">{label}</span>
+      <span style={{ color: active ? color : 'var(--ftx-muted)' }}>{icon}</span>
+      <span className="font-display font-bold text-[15px]">{label}</span>
       {hint && (
-        <span className="text-[10px] font-mono uppercase tracking-widest text-muted">
+        <span
+          className="text-[10px] font-mono uppercase tracking-widest px-1.5 py-0.5 rounded"
+          style={{
+            background: active ? 'var(--ftx-cream)' : 'transparent',
+            color: 'var(--ftx-muted)',
+            border: active ? '1px solid var(--ftx-line)' : 'none',
+          }}
+        >
           {hint}
         </span>
       )}
@@ -1025,6 +1243,7 @@ const labelForType = (type: FieldType): string => {
     SECTION:    'Nueva sección',
     DIVIDER:    'Divisor',
     SPACER:     'Espacio',
+    IMAGE:      'Imagen',
     AUTO_USER_NAME:     'Nombre completo (auto)',
     AUTO_EMPLOYEE_CODE: 'Código de empleado (auto)',
     AUTO_POSITION:      'Cargo (auto)',

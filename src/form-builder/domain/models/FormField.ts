@@ -187,6 +187,43 @@ function clampRows(r: number): number {
   return n;
 }
 
+/**
+ * Para fields presentational (HEADING, PARAGRAPH, SECTION, IMAGE, etc.) usamos
+ * el campo `options` como JSON para guardar configuración visual:
+ *   { "bg": "#ffffff", "fg": "#111827", "src": "https://...", "alt": "..." }
+ *
+ * Esto evita una migración de BD para agregar columnas de color/imagen.
+ */
+export interface PresentationalConfig {
+  bg?: string;
+  fg?: string;
+  src?: string;
+  alt?: string;
+}
+
+export function parsePresentationalConfig(options: string | null): PresentationalConfig {
+  if (!options) return {};
+  try {
+    const parsed = JSON.parse(options);
+    if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+      return parsed as PresentationalConfig;
+    }
+  } catch {
+    /* falls through */
+  }
+  return {};
+}
+
+export function serializePresentationalConfig(config: PresentationalConfig): string | null {
+  const cleaned: PresentationalConfig = {};
+  if (config.bg)  cleaned.bg = config.bg;
+  if (config.fg)  cleaned.fg = config.fg;
+  if (config.src) cleaned.src = config.src;
+  if (config.alt) cleaned.alt = config.alt;
+  if (Object.keys(cleaned).length === 0) return null;
+  return JSON.stringify(cleaned);
+}
+
 export const slugifyFieldKey = (label: string): string => {
   return label
     .toLowerCase()

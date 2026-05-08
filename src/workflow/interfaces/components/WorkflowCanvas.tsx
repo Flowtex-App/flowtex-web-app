@@ -1,4 +1,6 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import {
+  forwardRef, useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState,
+} from 'react';
 import { Save, Send, Plus } from 'lucide-react';
 import {
   ReactFlow,
@@ -72,23 +74,32 @@ interface Props {
 }
 
 /**
- * Editor de workflow reusable. Contiene el canvas ReactFlow, el inspector
- * lateral y el modal de configuración de transición.
- *
- * Para evitar recrear ReactFlowProvider en cada montaje, el componente
- * exporta también `WorkflowCanvasProvider` que es el wrapper externo.
+ * Handle imperativo que el FormBuilder usa para disparar `save()` del workflow
+ * desde el botón "Guardar" del header del form. Así un solo click guarda
+ * formulario y workflow juntos sin que el usuario tenga que recordar dos
+ * botones distintos.
  */
-export function WorkflowCanvas(props: Props) {
-  return (
-    <ReactFlowProvider>
-      <WorkflowCanvasInner {...props} />
-    </ReactFlowProvider>
-  );
+export interface WorkflowCanvasHandle {
+  save: () => Promise<unknown>;
 }
 
+/**
+ * Editor de workflow reusable. Contiene el canvas ReactFlow, el inspector
+ * lateral y el modal de configuración de transición.
+ */
+export const WorkflowCanvas = forwardRef<WorkflowCanvasHandle, Props>(
+  function WorkflowCanvas(props, ref) {
+    return (
+      <ReactFlowProvider>
+        <WorkflowCanvasInner {...props} forwardedRef={ref} />
+      </ReactFlowProvider>
+    );
+  },
+);
+
 function WorkflowCanvasInner({
-  workflowId, formContext, onSaved, hideToolbar = false, defaultName,
-}: Props) {
+  workflowId, formContext, onSaved, hideToolbar = false, defaultName, forwardedRef,
+}: Props & { forwardedRef?: React.Ref<WorkflowCanvasHandle> }) {
   const isNew = workflowId === null;
   const { current, loading, saving, error, loadOne, saveOne, publishOne, resetCurrent } = useWorkflowStore();
 
@@ -322,10 +333,19 @@ function WorkflowCanvasInner({
       });
       setSavedNotice('Cambios guardados');
       onSaved?.(saved);
+      return saved;
     } catch {
       // store handles error
+      return undefined;
     }
   };
+
+  // Expose imperative API so the parent (FormBuilder) can trigger save()
+  // from its single "Guardar" button without duplicating state.
+  useImperativeHandle(forwardedRef, () => ({
+    save: onSave,
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }), [name, description, nodes, edges, workflowId, isNew, defaultName]);
 
   const onPublish = async () => {
     if (!workflowId) return;
