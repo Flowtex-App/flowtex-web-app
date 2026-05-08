@@ -445,35 +445,39 @@ export default function FormBuilderPage() {
             )}
           </div>
 
-          {/* Main tabs: Estructura | Aprobaciones */}
-          {!isNew && (
-            <div
-              className="flex shrink-0 px-4"
-              style={{ background: 'var(--ftx-paper)', borderBottom: '1px solid var(--ftx-line)' }}
-            >
-              <MainTabBtn
-                active={mainTab === 'structure'}
-                onClick={() => setMainTab('structure')}
-                icon={<FileText size={13} />}
-                label="Estructura"
-                hint={`${fields.length} campos`}
-              />
-              <MainTabBtn
-                active={mainTab === 'approval'}
-                onClick={() => setMainTab('approval')}
-                icon={<GitBranch size={13} />}
-                label="Aprobaciones"
-                hint={
-                  current?.workflowId
+          {/* Main tabs: Estructura | Aprobaciones — visibles siempre */}
+          <div
+            className="flex shrink-0 px-4"
+            style={{ background: 'var(--ftx-paper)', borderBottom: '1px solid var(--ftx-line)' }}
+          >
+            <MainTabBtn
+              active={mainTab === 'structure'}
+              onClick={() => setMainTab('structure')}
+              icon={<FileText size={13} />}
+              label="Estructura"
+              hint={`${fields.length} campos`}
+            />
+            <MainTabBtn
+              active={mainTab === 'approval'}
+              onClick={() => setMainTab('approval')}
+              icon={<GitBranch size={13} />}
+              label="Aprobaciones"
+              hint={
+                isNew
+                  ? 'guarda primero'
+                  : current?.workflowId
                     ? (currentWorkflow?.id === current.workflowId
                         ? `${currentWorkflow.steps.length} pasos`
                         : 'workflow linkeado')
                     : 'sin flujo'
-                }
-                accent={current?.workflowId ? 'var(--ftx-info)' : 'var(--ftx-muted)'}
-              />
-            </div>
-          )}
+              }
+              accent={
+                isNew ? 'var(--ftx-muted)'
+                : current?.workflowId ? 'var(--ftx-info)'
+                : 'var(--ftx-muted)'
+              }
+            />
+          </div>
 
           {/* Notices */}
           {(error || savedNotice) && (
@@ -649,13 +653,57 @@ export default function FormBuilderPage() {
           {/* Workflow workspace — tab "Aprobaciones" */}
           {mainTab === 'approval' && (
             <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
-              <WorkflowCanvas
-                workflowId={current?.workflowId ?? null}
-                formContext={formContext}
-                defaultName={title ? `Flujo de "${title}"` : undefined}
-                onSaved={onWorkflowSaved}
-                hideToolbar={false}
-              />
+              {isNew ? (
+                <div className="flex-1 grid place-items-center p-8" style={{ background: 'var(--ftx-canvas)' }}>
+                  <div className="ftx-card-elev max-w-lg p-8 text-center">
+                    <div
+                      className="size-12 rounded-full mx-auto grid place-items-center mb-4"
+                      style={{ background: 'var(--ftx-brand-tint)', border: '1px solid var(--ftx-brand)' }}
+                    >
+                      <GitBranch size={20} className="text-brand" />
+                    </div>
+                    <h2 className="font-display font-bold text-lg text-ink">
+                      Guarda el formulario primero
+                    </h2>
+                    <p className="text-sm text-muted mt-2 leading-relaxed">
+                      El flujo de aprobación se construye en relación a los campos de
+                      este formulario. Cuando guardes la estructura, podrás diseñar
+                      las condiciones (ej. "si tipo = compra → finanzas")
+                      con autocompletado de los fieldKeys reales.
+                    </p>
+                    <div className="mt-5 flex items-center justify-center gap-2">
+                      <Button onClick={() => setMainTab('structure')}>
+                        Volver a Estructura
+                      </Button>
+                      <Button
+                        variant="primary"
+                        onClick={async () => {
+                          await onSave();
+                          setMainTab('approval');
+                        }}
+                        disabled={saving || !title.trim()}
+                        icon={<Save size={14} />}
+                        title={!title.trim() ? 'Pon un título antes de guardar' : 'Guardar y continuar'}
+                      >
+                        {saving ? 'Guardando...' : 'Guardar y continuar'}
+                      </Button>
+                    </div>
+                    {!title.trim() && (
+                      <p className="text-[11px] text-warning mt-3">
+                        Ponle un título al formulario antes de guardar.
+                      </p>
+                    )}
+                  </div>
+                </div>
+              ) : (
+                <WorkflowCanvas
+                  workflowId={current?.workflowId ?? null}
+                  formContext={formContext}
+                  defaultName={title ? `Flujo de "${title}"` : undefined}
+                  onSaved={onWorkflowSaved}
+                  hideToolbar={false}
+                />
+              )}
             </div>
           )}
         </div>
