@@ -14,6 +14,9 @@ interface FormFieldDto {
   helpText: string | null;
   position: number;
   width: number;
+  colStart: number | null;
+  rowStart: number | null;
+  rowSpan: number;
   options: string | null;
 }
 
@@ -51,6 +54,9 @@ const toForm = (dto: FormDto): Form => {
         helpText: f.helpText,
         position: f.position,
         width: clampWidth(f.width ?? 12),
+        colStart: f.colStart ?? null,
+        rowStart: f.rowStart ?? null,
+        rowSpan: f.rowSpan ?? 1,
         options: f.options,
       }),
   );
@@ -80,10 +86,12 @@ const draftToBody = (draft: FormDraft) => ({
     fieldType: f.fieldType,
     required: f.required,
     placeholder: f.placeholder ?? '',
-    // Persist with embedded UI metadata (step, rows) when present.
     helpText: f.rawHelpText ?? f.helpText ?? '',
     position: idx,
     width: f.width,
+    colStart: f.colStart,
+    rowStart: f.rowStart,
+    rowSpan: f.rows,
     options: f.options ?? '',
   })),
 });

@@ -1,6 +1,8 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { User, type Role } from '../../domain/models/User';
+import type { Area } from '../../domain/models/Area';
+import type { Position } from '../../domain/models/Position';
 import type { SignUpInput } from '../../domain/ports/IAuthRepository';
 import {
   signInUseCase,
@@ -14,6 +16,12 @@ interface PersistedUser {
   username: string;
   email: string;
   fullName: string;
+  employeeCode?: string | null;
+  position?: Position | null;
+  positionLabel?: string | null;
+  positionSpecialty?: string | null;
+  area?: Area | null;
+  areaLabel?: string | null;
   roles: Role[];
 }
 
@@ -34,6 +42,12 @@ const toPersisted = (user: User | null): PersistedUser | null =>
         username: user.username,
         email: user.email,
         fullName: user.fullName,
+        employeeCode: user.employeeCode,
+        position: user.position,
+        positionLabel: user.positionLabel,
+        positionSpecialty: user.positionSpecialty,
+        area: user.area,
+        areaLabel: user.areaLabel,
         roles: [...user.roles],
       }
     : null;
@@ -54,7 +68,7 @@ export const useAuthStore = create<AuthState>()(
           const user = await signInUseCase.execute({ username, password });
           set({ user, loading: false });
         } catch (e) {
-          const msg = e instanceof Error ? e.message : 'Error al iniciar sesion';
+          const msg = e instanceof Error ? e.message : 'Error al iniciar sesión';
           set({ error: msg, loading: false });
           throw e;
         }

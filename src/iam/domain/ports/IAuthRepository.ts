@@ -1,5 +1,7 @@
 import type { User } from '../models/User';
 import type { Credentials } from '../models/Credentials';
+import type { Area } from '../models/Area';
+import type { Position } from '../models/Position';
 
 export interface AuthSession {
   user: User;
@@ -11,6 +13,10 @@ export interface SignUpInput {
   email: string;
   fullName: string;
   password: string;
+  employeeCode: string;
+  position: Position;
+  positionSpecialty?: string;
+  area: Area;
 }
 
 export interface IAuthRepository {

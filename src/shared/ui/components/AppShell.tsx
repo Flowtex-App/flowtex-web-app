@@ -1,15 +1,15 @@
-import { type ReactNode, useState } from 'react';
+import { type ReactNode, useState, useRef, useEffect } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import {
-  LogOut, Inbox, FileSpreadsheet, Search, BarChart3, FolderKanban,
-  GitBranch, Users, ListChecks, ChevronDown, ChevronRight, Bell, Menu, X, Layers,
+  LogOut, Inbox, FileSpreadsheet, Search, FolderKanban,
+  GitBranch, Users, ChevronDown, ChevronRight, Menu, X, Layers,
+  Building2, Briefcase, BadgeCheck, Shield, ChevronUp, Plus,
 } from 'lucide-react';
 import { useAuthStore } from '@/iam/interfaces/stores/auth.store';
 import { ThemeMenu } from '@/shared/ui/theme/ThemeMenu';
 
 interface AppShellProps {
   children: ReactNode;
-  /** When true, content area fills the viewport and clips overflow internally. */
   fitViewport?: boolean;
 }
 
@@ -18,6 +18,8 @@ interface NavLeaf {
   label: string;
   icon?: ReactNode;
   end?: boolean;
+  /** When set, only users with one of these roles see the entry. */
+  requiresRole?: string[];
 }
 
 interface NavGroup {
@@ -41,7 +43,7 @@ const navGroups: NavGroup[] = [
     title: 'Diseño',
     items: [
       { to: '/forms',     label: 'Formularios',  icon: <FolderKanban size={14} /> },
-      { to: '/forms/new', label: 'Nuevo form',   icon: <FileSpreadsheet size={14} /> },
+      { to: '/forms/new', label: 'Nuevo form',   icon: <Plus size={14} /> },
       { to: '/workflows', label: 'Workflows',    icon: <GitBranch size={14} /> },
     ],
   },
@@ -49,9 +51,7 @@ const navGroups: NavGroup[] = [
     id: 'gestion',
     title: 'Gestión',
     items: [
-      { to: '/groups',  label: 'Grupos',                icon: <Users size={14} /> },
-      { to: '/reports', label: 'Reportes',              icon: <BarChart3 size={14} /> },
-      { to: '/orders',  label: 'Seguimiento órdenes',   icon: <ListChecks size={14} /> },
+      { to: '/users',   label: 'Usuarios',  icon: <Users size={14} /> },
     ],
   },
 ];
@@ -61,8 +61,21 @@ export function AppShell({ children, fitViewport = false }: AppShellProps) {
   const navigate = useNavigate();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [collapsedGroups, setCollapsedGroups] = useState<Record<string, boolean>>({});
+  const [userMenuOpen, setUserMenuOpen] = useState(false);
+  const userMenuRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    const onClick = (e: MouseEvent) => {
+      if (userMenuRef.current && !userMenuRef.current.contains(e.target as Node)) {
+        setUserMenuOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', onClick);
+    return () => document.removeEventListener('mousedown', onClick);
+  }, []);
 
   const onSignOut = async () => {
+    setUserMenuOpen(false);
     await signOut();
     navigate('/sign-in');
   };
@@ -85,21 +98,21 @@ export function AppShell({ children, fitViewport = false }: AppShellProps) {
       >
         {/* Brand */}
         <div
-          className="h-12 px-4 flex items-center gap-2.5 shrink-0"
+          className="h-14 px-4 flex items-center gap-2.5 shrink-0"
           style={{ borderBottom: '1px solid var(--ftx-line)' }}
         >
           <div
-            className="size-7 rounded grid place-items-center"
-            style={{ background: 'var(--ftx-brand)' }}
+            className="size-8 rounded grid place-items-center"
+            style={{ background: 'var(--ftx-brand)', boxShadow: '0 0 0 1px rgba(0,0,0,0.1)' }}
           >
-            <Layers size={14} className="text-white" />
+            <Layers size={15} className="text-white" />
           </div>
           <div className="leading-tight">
-            <div className="font-display font-extrabold text-[14px] tracking-tight text-ink">
+            <div className="font-display font-extrabold text-[15px] tracking-tight text-ink">
               FLOWTEX
             </div>
-            <div className="text-[9px] font-mono uppercase tracking-[0.2em] text-muted">
-              hitss / claro
+            <div className="text-[9px] font-mono uppercase tracking-[0.22em] text-muted">
+              claro perú
             </div>
           </div>
           <button
@@ -112,11 +125,11 @@ export function AppShell({ children, fitViewport = false }: AppShellProps) {
         </div>
 
         {/* Nav groups */}
-        <nav className="flex-1 overflow-y-auto py-1 text-ink-2">
+        <nav className="flex-1 overflow-y-auto py-2 text-ink-2">
           {navGroups.map((group) => {
             const isCollapsed = !!collapsedGroups[group.id];
             return (
-              <div key={group.id} className="pb-1">
+              <div key={group.id} className="pb-1.5">
                 <button
                   onClick={() => toggleGroup(group.id)}
                   className="w-full flex items-center justify-between ftx-nav-section-title hover:text-ink"
@@ -145,13 +158,69 @@ export function AppShell({ children, fitViewport = false }: AppShellProps) {
           })}
         </nav>
 
-        {/* Footer */}
+        {/* User card in sidebar — replaces fake telemetry footer */}
+        {user && (
+          <div
+            ref={userMenuRef}
+            className="px-3 py-2.5 relative"
+            style={{ borderTop: '1px solid var(--ftx-line)' }}
+          >
+            <button
+              onClick={() => setUserMenuOpen((v) => !v)}
+              className={[
+                'w-full flex items-center gap-2.5 px-2 py-2 rounded transition-colors text-left',
+                userMenuOpen ? 'bg-cream' : 'hover:bg-cream',
+              ].join(' ')}
+            >
+              <div
+                className="size-8 rounded grid place-items-center font-display font-bold text-[11px] text-white shrink-0"
+                style={{ background: 'var(--ftx-brand)' }}
+              >
+                {user.initials()}
+              </div>
+              <div className="flex-1 min-w-0 leading-tight">
+                <div className="text-[12px] font-medium text-ink truncate">{user.fullName}</div>
+                <div className="text-[10px] text-muted font-mono truncate">
+                  {user.employeeCode || '@' + user.username}
+                </div>
+              </div>
+              {userMenuOpen ? <ChevronDown size={12} className="text-muted" /> : <ChevronUp size={12} className="text-muted" />}
+            </button>
+
+            {userMenuOpen && (
+              <div
+                className="absolute bottom-full left-3 right-3 mb-2 rounded overflow-hidden shadow-lg"
+                style={{ background: 'var(--ftx-paper)', border: '1px solid var(--ftx-line-strong)' }}
+              >
+                <div className="px-3 py-2.5 border-b border-line bg-cream">
+                  <div className="text-[10px] font-mono uppercase tracking-widest text-muted mb-1.5">
+                    sesión activa
+                  </div>
+                  <UserMetaRow icon={<BadgeCheck size={11} />} label={user.employeeCode || '—'} />
+                  <UserMetaRow icon={<Briefcase size={11} />} label={user.formattedPosition() || '—'} />
+                  <UserMetaRow icon={<Building2 size={11} />} label={user.areaLabel || '—'} />
+                  <UserMetaRow
+                    icon={<Shield size={11} />}
+                    label={user.roles.map((r) => r.replace('ROLE_', '')).join(' · ') || '—'}
+                  />
+                </div>
+                <button
+                  onClick={onSignOut}
+                  className="w-full flex items-center gap-2 px-3 py-2.5 text-[12px] text-ink hover:bg-cream"
+                >
+                  <LogOut size={13} className="text-brand" />
+                  Cerrar sesión
+                </button>
+              </div>
+            )}
+          </div>
+        )}
+
         <div
-          className="px-4 py-2.5 text-[10px] text-muted leading-relaxed"
+          className="px-4 py-1.5 text-[9px] text-muted/70 font-mono"
           style={{ borderTop: '1px solid var(--ftx-line)' }}
         >
-          <div className="font-mono">v0.2.0</div>
-          <div>Hitss Perú · Claro Perú</div>
+          v0.2.0 · claro perú
         </div>
       </aside>
 
@@ -166,13 +235,13 @@ export function AppShell({ children, fitViewport = false }: AppShellProps) {
       {/* Main column */}
       <div className="flex-1 flex flex-col min-w-0">
         <header
-          className="h-12 flex items-center justify-between px-4 lg:px-5 shrink-0"
+          className="h-14 flex items-center justify-between px-4 lg:px-5 shrink-0 gap-3"
           style={{
             background: 'var(--ftx-paper)',
             borderBottom: '1px solid var(--ftx-line)',
           }}
         >
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3 flex-1 min-w-0">
             <button
               onClick={() => setMobileOpen(!mobileOpen)}
               className="lg:hidden ftx-icon-btn"
@@ -180,48 +249,38 @@ export function AppShell({ children, fitViewport = false }: AppShellProps) {
             >
               <Menu size={16} />
             </button>
-            <div className="hidden md:flex items-center gap-2 text-[11px] text-muted font-mono">
-              <span>app.241</span>
-              <span style={{ color: 'var(--ftx-line-strong)' }}>/</span>
-              <span style={{ color: 'var(--ftx-success)' }}>● activo</span>
+
+            {/* Quick search hidden on small */}
+            <div className="hidden md:flex items-center gap-2 flex-1 max-w-md">
+              <div className="relative w-full">
+                <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted" />
+                <input
+                  className="ftx-input-flat w-full pl-9 text-sm py-2"
+                  placeholder="Buscar formulario, ticket, usuario..."
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      const v = (e.target as HTMLInputElement).value.trim();
+                      if (v) navigate(`/users?q=${encodeURIComponent(v)}`);
+                    }
+                  }}
+                />
+              </div>
             </div>
           </div>
 
           <div className="flex items-center gap-1.5">
             <ThemeMenu />
-
-            <button
-              className="ftx-icon-btn"
-              aria-label="Notificaciones"
-              title="Notificaciones"
-            >
-              <Bell size={14} />
-            </button>
-
-            {user && (
-              <div
-                className="flex items-center gap-2 pl-2.5 ml-1"
-                style={{ borderLeft: '1px solid var(--ftx-line)' }}
+            {user?.isAdmin() && (
+              <span
+                className="hidden md:inline-flex items-center gap-1 px-2 py-1 rounded text-[10px] font-mono uppercase tracking-widest"
+                style={{
+                  background: 'var(--ftx-brand-soft)',
+                  color: 'var(--ftx-brand-deep)',
+                  border: '1px solid var(--ftx-brand)',
+                }}
               >
-                <div
-                  className="size-7 rounded grid place-items-center font-display font-bold text-[10px] text-white"
-                  style={{ background: 'var(--ftx-brand)' }}
-                >
-                  {user.initials()}
-                </div>
-                <div className="hidden md:block leading-tight text-right">
-                  <div className="text-[12px] font-medium text-ink">{user.fullName}</div>
-                  <div className="text-[10px] text-muted font-mono">@{user.username}</div>
-                </div>
-                <button
-                  onClick={onSignOut}
-                  className="ftx-icon-btn"
-                  aria-label="Cerrar sesión"
-                  title="Cerrar sesión"
-                >
-                  <LogOut size={13} />
-                </button>
-              </div>
+                <Shield size={10} /> admin
+              </span>
             )}
           </div>
         </header>
@@ -236,6 +295,15 @@ export function AppShell({ children, fitViewport = false }: AppShellProps) {
           )}
         </main>
       </div>
+    </div>
+  );
+}
+
+function UserMetaRow({ icon, label }: { icon: ReactNode; label: string }) {
+  return (
+    <div className="flex items-center gap-1.5 text-[11px] text-ink-2 py-0.5 truncate">
+      <span className="text-muted shrink-0">{icon}</span>
+      <span className="truncate">{label}</span>
     </div>
   );
 }

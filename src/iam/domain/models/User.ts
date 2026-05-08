@@ -1,10 +1,6 @@
-/**
- * User aggregate del frontend.
- *
- * Representa al usuario autenticado en la sesión actual. Cero invariantes de
- * persistencia: solo lo que la UI necesita para razonar sobre permisos
- * y presentación.
- */
+import type { Area } from './Area';
+import type { Position } from './Position';
+
 export type Role =
   | 'ROLE_ADMIN'
   | 'ROLE_DESIGNER'
@@ -16,6 +12,12 @@ export class User {
   readonly username: string;
   readonly email: string;
   readonly fullName: string;
+  readonly employeeCode: string;
+  readonly position: Position | null;
+  readonly positionLabel: string | null;
+  readonly positionSpecialty: string | null;
+  readonly area: Area | null;
+  readonly areaLabel: string | null;
   readonly roles: readonly Role[];
 
   constructor(props: {
@@ -23,6 +25,12 @@ export class User {
     username: string;
     email: string;
     fullName: string;
+    employeeCode?: string | null;
+    position?: Position | null;
+    positionLabel?: string | null;
+    positionSpecialty?: string | null;
+    area?: Area | null;
+    areaLabel?: string | null;
     roles: Role[];
   }) {
     if (!props.username) throw new Error('username is required');
@@ -31,6 +39,12 @@ export class User {
     this.username = props.username;
     this.email = props.email;
     this.fullName = props.fullName;
+    this.employeeCode = props.employeeCode ?? '';
+    this.position = props.position ?? null;
+    this.positionLabel = props.positionLabel ?? null;
+    this.positionSpecialty = props.positionSpecialty ?? null;
+    this.area = props.area ?? null;
+    this.areaLabel = props.areaLabel ?? null;
     this.roles = Object.freeze([...props.roles]);
   }
 
@@ -44,6 +58,13 @@ export class User {
 
   isDesigner(): boolean {
     return this.hasRole('ROLE_DESIGNER') || this.isAdmin();
+  }
+
+  /** "Analista de Sistemas" — combina cargo + especialidad. */
+  formattedPosition(): string {
+    const base = this.positionLabel ?? '';
+    if (this.positionSpecialty) return `${base} ${this.positionSpecialty}`.trim();
+    return base;
   }
 
   initials(): string {

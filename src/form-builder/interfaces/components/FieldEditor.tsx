@@ -43,6 +43,9 @@ export function FieldEditor({
     transition,
     zIndex: isDragging ? 50 : undefined,
     minHeight: `${effectiveRows * 90}px`,
+    ...(field.colStart != null ? { gridColumnStart: field.colStart } : {}),
+    ...(field.rowStart != null ? { gridRowStart: field.rowStart } : {}),
+    ...(effectiveRows > 1 ? { gridRowEnd: `span ${effectiveRows}` } : {}),
   };
 
   // Horizontal width resize via right-edge handle

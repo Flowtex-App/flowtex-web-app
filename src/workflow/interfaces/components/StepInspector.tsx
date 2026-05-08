@@ -1,9 +1,15 @@
-import { Trash2, Plus, ChevronDown, Check } from 'lucide-react';
-import { useState } from 'react';
+import { Trash2, Plus, ChevronDown, Check, UserPlus, Users as UsersIcon, Filter, Search } from 'lucide-react';
+import { useEffect, useState } from 'react';
 import {
-  type WorkflowStep, type WorkflowStepSection, type SectionKind, type StepMode, type StepColor,
+  type WorkflowStep, type WorkflowStepSection, type WorkflowStepApprover, type ApproverKind,
+  type SectionKind, type StepMode, type StepColor,
   DEFAULT_ROLES, SECTION_KIND_META, STEP_MODE_META, STEP_COLORS, colorMeta, newSection,
+  newApproverUser, newApproverAreaPosition,
 } from '../../domain/models/Workflow';
+import { AREAS } from '@/iam/domain/models/Area';
+import { POSITIONS } from '@/iam/domain/models/Position';
+import { iamPorts } from '@/iam/interfaces/composition/iam-container';
+import type { User } from '@/iam/domain/models/User';
 
 interface Props {
   step: WorkflowStep | null;
@@ -50,6 +56,23 @@ export function StepInspector({ step, onChange, onDelete }: Props) {
     });
   };
 
+  const updateApprover = (idx: number, patch: Partial<WorkflowStepApprover>) => {
+    update({ approvers: step.approvers.map((a, i) => (i === idx ? { ...a, ...patch } : a)) });
+  };
+
+  const removeApprover = (idx: number) => {
+    update({
+      approvers: step.approvers.filter((_, i) => i !== idx).map((a, i) => ({ ...a, position: i })),
+    });
+  };
+
+  const addApprover = (kind: ApproverKind) => {
+    const next = kind === 'AREA_POSITION'
+      ? newApproverAreaPosition('TECNOLOGIA', 'JEFE', step.approvers.length)
+      : { position: step.approvers.length, kind, userId: null, area: null, userPosition: null, role: null };
+    update({ approvers: [...step.approvers, next] });
+  };
+
   const cm = colorMeta(step.color);
 
   return (
@@ -92,11 +115,12 @@ export function StepInspector({ step, onChange, onDelete }: Props) {
             />
           </div>
           <div className="ftx-inspector-row">
-            <label>Rol</label>
+            <label>Rol legacy</label>
             <select
               value={step.role}
               onChange={(e) => update({ role: e.target.value })}
               className="ftx-input-flat"
+              title="Rol genérico usado solo si no se asignan aprobadores específicos"
             >
               {DEFAULT_ROLES.map((r) => (
                 <option key={r.id} value={r.id}>{r.label}</option>
@@ -172,6 +196,53 @@ export function StepInspector({ step, onChange, onDelete }: Props) {
           <p className="px-3 pb-1 text-[10px] text-muted leading-snug">
             El color aparece como acento en el nodo y en el panel de configuración.
           </p>
+        </div>
+
+        <div className="ftx-inspector-section pb-3">
+          <div className="flex items-center justify-between px-3 pt-2 pb-1">
+            <h4 className="ftx-inspector-title !p-0">Aprobadores</h4>
+            <span className="ftx-tag-flat">{step.approvers.length}</span>
+          </div>
+          <p className="px-3 pb-2 text-[10px] text-muted leading-snug">
+            Quiénes pueden cerrar este paso. Se combina con el modo de arriba:
+            <span className="text-ink"> {STEP_MODE_META[step.mode].label}</span>.
+          </p>
+
+          <div className="px-3 space-y-1.5">
+            {step.approvers.map((a, idx) => (
+              <ApproverRow
+                key={idx}
+                approver={a}
+                onChange={(patch) => updateApprover(idx, patch)}
+                onRemove={() => removeApprover(idx)}
+              />
+            ))}
+            {step.approvers.length === 0 && (
+              <div
+                className="text-center py-3 text-[10px] text-muted italic rounded border border-dashed"
+                style={{ borderColor: 'var(--ftx-line-strong)' }}
+              >
+                Sin aprobadores asignados — se usará el rol legacy "{step.role.replace('ROLE_', '')}"
+              </div>
+            )}
+          </div>
+
+          <div className="px-3 pt-2 grid grid-cols-2 gap-1.5">
+            <button
+              onClick={() => addApprover('USER')}
+              className="ftx-btn !text-[11px] !py-1.5"
+              title="Asignar un usuario específico por código de empleado"
+            >
+              <UserPlus size={11} /> Usuario
+            </button>
+            <button
+              onClick={() => addApprover('AREA_POSITION')}
+              className="ftx-btn !text-[11px] !py-1.5"
+              title="Filtro dinámico: cualquier usuario con esa área y cargo"
+            >
+              <Filter size={11} /> Área + cargo
+            </button>
+          </div>
         </div>
 
         <div className="ftx-inspector-section pb-3">
@@ -285,6 +356,177 @@ function SectionRow({
             placeholder='{"options":["APROBAR","RECHAZAR"]}'
             className="ftx-input-flat font-mono text-[10px] resize-y"
           />
+        </div>
+      )}
+    </div>
+  );
+}
+
+function ApproverRow({
+  approver, onChange, onRemove,
+}: {
+  approver: WorkflowStepApprover;
+  onChange: (patch: Partial<WorkflowStepApprover>) => void;
+  onRemove: () => void;
+}) {
+  if (approver.kind === 'USER') {
+    return (
+      <UserApproverRow approver={approver} onChange={onChange} onRemove={onRemove} />
+    );
+  }
+  if (approver.kind === 'AREA_POSITION') {
+    return (
+      <div className="ftx-tile">
+        <div className="ftx-tile-toolbar">
+          <Filter size={11} className="text-info shrink-0" />
+          <span className="text-[10px] font-mono uppercase tracking-widest text-info">filtro</span>
+          <div className="flex-1" />
+          <button onClick={onRemove} className="ftx-icon-btn ftx-icon-btn-danger" title="Eliminar">
+            <Trash2 size={11} />
+          </button>
+        </div>
+        <div className="px-2.5 py-2 grid grid-cols-2 gap-1.5">
+          <select
+            value={approver.area ?? ''}
+            onChange={(e) => onChange({ area: e.target.value })}
+            className="ftx-input-flat !text-[11px]"
+          >
+            <option value="">Área...</option>
+            {AREAS.map((a) => <option key={a.id} value={a.id}>{a.label}</option>)}
+          </select>
+          <select
+            value={approver.userPosition ?? ''}
+            onChange={(e) => onChange({ userPosition: e.target.value })}
+            className="ftx-input-flat !text-[11px]"
+          >
+            <option value="">Cargo...</option>
+            {POSITIONS.map((p) => <option key={p.id} value={p.id}>{p.label}</option>)}
+          </select>
+        </div>
+      </div>
+    );
+  }
+  // ROLE legacy fallback row
+  return (
+    <div className="ftx-tile">
+      <div className="ftx-tile-toolbar">
+        <UsersIcon size={11} className="text-muted" />
+        <span className="text-[10px] font-mono uppercase tracking-widest text-muted">rol</span>
+        <span className="text-[11px] text-ink">{(approver.role ?? '').replace('ROLE_', '')}</span>
+        <div className="flex-1" />
+        <button onClick={onRemove} className="ftx-icon-btn ftx-icon-btn-danger" title="Eliminar">
+          <Trash2 size={11} />
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function UserApproverRow({
+  approver, onChange, onRemove,
+}: {
+  approver: WorkflowStepApprover;
+  onChange: (patch: Partial<WorkflowStepApprover>) => void;
+  onRemove: () => void;
+}) {
+  const [searchOpen, setSearchOpen] = useState(approver.userId == null);
+  const [query, setQuery] = useState('');
+  const [results, setResults] = useState<User[]>([]);
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (!searchOpen || query.trim().length < 2) {
+      setResults([]);
+      return;
+    }
+    const t = setTimeout(async () => {
+      setLoading(true);
+      try {
+        const users = await iamPorts.userRepository.list({ q: query });
+        setResults(users.slice(0, 8));
+      } finally {
+        setLoading(false);
+      }
+    }, 220);
+    return () => clearTimeout(t);
+  }, [query, searchOpen]);
+
+  const pick = (u: User) => {
+    onChange({
+      userId: u.id,
+      userLabel: u.fullName,
+      userEmployeeCode: u.employeeCode,
+    });
+    setSearchOpen(false);
+    setQuery('');
+  };
+
+  return (
+    <div className="ftx-tile">
+      <div className="ftx-tile-toolbar">
+        <UserPlus size={11} className="text-brand shrink-0" />
+        <span className="text-[10px] font-mono uppercase tracking-widest text-brand">usuario</span>
+        {approver.userId && !searchOpen ? (
+          <span className="text-[11px] text-ink truncate flex-1">
+            {approver.userLabel ?? `#${approver.userId}`}{' '}
+            {approver.userEmployeeCode && (
+              <span className="text-[9px] font-mono text-muted">· {approver.userEmployeeCode}</span>
+            )}
+          </span>
+        ) : (
+          <span className="text-[11px] text-muted italic flex-1">Buscar empleado...</span>
+        )}
+        <button
+          onClick={() => setSearchOpen((v) => !v)}
+          className="ftx-icon-btn"
+          title="Cambiar usuario"
+        >
+          <Search size={11} />
+        </button>
+        <button onClick={onRemove} className="ftx-icon-btn ftx-icon-btn-danger" title="Eliminar">
+          <Trash2 size={11} />
+        </button>
+      </div>
+      {searchOpen && (
+        <div
+          className="px-2.5 py-2"
+          style={{ borderTop: '1px solid var(--ftx-line)', background: 'var(--ftx-cream)' }}
+        >
+          <input
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="Código C12345 o nombre..."
+            className="ftx-input-flat !text-[11px] mb-1.5"
+            autoFocus
+          />
+          {loading && <div className="text-[10px] text-muted italic">Buscando...</div>}
+          {!loading && results.length > 0 && (
+            <div className="space-y-0.5 max-h-48 overflow-y-auto">
+              {results.map((u) => (
+                <button
+                  key={u.id}
+                  onClick={() => pick(u)}
+                  className="w-full flex items-center gap-2 px-2 py-1.5 rounded hover:bg-paper text-left transition-colors"
+                >
+                  <div
+                    className="size-6 rounded grid place-items-center font-display font-bold text-[9px] text-white shrink-0"
+                    style={{ background: 'var(--ftx-brand)' }}
+                  >
+                    {u.initials()}
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <div className="text-[11px] text-ink truncate">{u.fullName}</div>
+                    <div className="text-[9px] text-muted font-mono truncate">
+                      {u.employeeCode || '—'} · {u.formattedPosition() || '—'} · {u.areaLabel || '—'}
+                    </div>
+                  </div>
+                </button>
+              ))}
+            </div>
+          )}
+          {!loading && query.length >= 2 && results.length === 0 && (
+            <div className="text-[10px] text-muted italic">Sin resultados.</div>
+          )}
         </div>
       )}
     </div>

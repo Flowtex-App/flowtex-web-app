@@ -1,6 +1,7 @@
-import { Paperclip, PenLine } from 'lucide-react';
+import { Paperclip, PenLine, User as UserIcon, BadgeCheck, Building2, Briefcase } from 'lucide-react';
 import { FormField } from '../../domain/models/FormField';
 import { FIELD_TYPE_META } from '../../domain/models/FieldType';
+import { useAuthStore } from '@/iam/interfaces/stores/auth.store';
 
 interface Props {
   field: FormField;
@@ -14,6 +15,11 @@ export function FieldRender({ field, compact = false }: Props) {
   // Layout / display blocks
   if (meta.presentational) {
     return <PresentationalRender field={field} compact={compact} />;
+  }
+
+  // Auto-filled blocks (resolved from current user)
+  if (meta.autoFill) {
+    return <AutoFillRender field={field} compact={compact} />;
   }
 
   return (
@@ -124,7 +130,7 @@ function PresentationalRender({ field, compact }: { field: FormField; compact: b
             heading
           </div>
           <h3 className={`font-display font-bold text-ink leading-tight ${compact ? 'text-base' : 'text-xl'}`}>
-            {field.label || 'Encabezado de seccion'}
+            {field.label || 'Encabezado de sección'}
           </h3>
           {field.helpText && (
             <p className="text-[11px] text-muted mt-0.5 italic font-editorial">
@@ -139,8 +145,8 @@ function PresentationalRender({ field, compact }: { field: FormField; compact: b
           <div className="font-mono text-[9px] uppercase tracking-widest text-muted mb-0.5">
             parrafo
           </div>
-          <p className={`text-ink-2 leading-relaxed ${compact ? 'text-[11px]' : 'text-sm'}`}>
-            {field.helpText || field.label || 'Texto explicativo para el usuario que llenara este formulario.'}
+          <p className={`text-ink-2 leading-relaxed whitespace-pre-line break-words ${compact ? 'text-[11px]' : 'text-sm'}`}>
+            {field.helpText || field.label || 'Texto explicativo para el usuario que llenará este formulario.'}
           </p>
         </div>
       );
@@ -150,10 +156,10 @@ function PresentationalRender({ field, compact }: { field: FormField; compact: b
           <div className="flex-1 h-px bg-line-strong" />
           <div className="text-center">
             <div className="font-mono text-[9px] uppercase tracking-widest text-brand mb-0.5">
-              § seccion
+              § sección
             </div>
             <div className={`font-display font-bold uppercase tracking-wider text-ink ${compact ? 'text-[11px]' : 'text-sm'}`}>
-              {field.label || 'Nueva seccion'}
+              {field.label || 'Nueva sección'}
             </div>
           </div>
           <div className="flex-1 h-px bg-line-strong" />
@@ -167,7 +173,68 @@ function PresentationalRender({ field, compact }: { field: FormField; compact: b
           <div className="flex-1 h-px bg-line-strong" />
         </div>
       );
+    case 'SPACER':
+      return (
+        <div
+          className="grid place-items-center text-[10px] font-mono uppercase tracking-widest text-muted/60 italic h-full min-h-[36px] rounded border border-dashed border-line"
+          style={{ background: 'transparent' }}
+        >
+          {compact ? '◻' : '◻ espacio'}
+        </div>
+      );
     default:
       return null;
   }
+}
+
+function AutoFillRender({ field, compact }: { field: FormField; compact: boolean }) {
+  const user = useAuthStore((s) => s.user);
+
+  let icon = <UserIcon size={12} className="text-steel" />;
+  let label = field.label;
+  let value = '—';
+
+  switch (field.fieldType) {
+    case 'AUTO_USER_NAME':
+      icon = <UserIcon size={12} className="text-steel" />;
+      value = user?.fullName ?? '— Inicia sesión para ver tu nombre —';
+      if (!field.label || field.label === 'Auto') label = 'Nombre completo';
+      break;
+    case 'AUTO_EMPLOYEE_CODE':
+      icon = <BadgeCheck size={12} className="text-steel" />;
+      value = user?.employeeCode || '—';
+      if (!field.label || field.label === 'Auto') label = 'Código de empleado';
+      break;
+    case 'AUTO_POSITION':
+      icon = <Briefcase size={12} className="text-steel" />;
+      value = user?.formattedPosition() || '—';
+      if (!field.label || field.label === 'Auto') label = 'Cargo';
+      break;
+    case 'AUTO_AREA':
+      icon = <Building2 size={12} className="text-steel" />;
+      value = user?.areaLabel || '—';
+      if (!field.label || field.label === 'Auto') label = 'Área';
+      break;
+  }
+
+  return (
+    <div className={compact ? '' : 'space-y-1'}>
+      {!compact && (
+        <span className="text-[10px] font-bold uppercase tracking-wider text-ink-2 truncate flex items-center gap-1">
+          {label} <span className="ftx-tag-flat !text-info !border-info !text-[8px]">auto</span>
+        </span>
+      )}
+      <div
+        className="flex items-center gap-2 px-2.5 py-2 rounded text-xs"
+        style={{
+          background: 'var(--ftx-cream)',
+          border: '1px dashed var(--ftx-line-strong)',
+          color: 'var(--ftx-ink)',
+        }}
+      >
+        {icon}
+        <span className="truncate">{value}</span>
+      </div>
+    </div>
+  );
 }

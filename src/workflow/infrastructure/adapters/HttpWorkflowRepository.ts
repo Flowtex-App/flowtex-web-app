@@ -1,6 +1,6 @@
 import type { AxiosInstance } from 'axios';
 import {
-  Workflow, type ConditionKind, type HandleSide, type SectionKind, type StepColor, type StepMode,
+  Workflow, type ApproverKind, type ConditionKind, type HandleSide, type SectionKind, type StepColor, type StepMode,
   type WorkflowDraft, type WorkflowStatus, newStepTempId,
 } from '../../domain/models/Workflow';
 import type { IWorkflowRepository } from '../../domain/ports/IWorkflowRepository';
@@ -24,6 +24,15 @@ interface TransitionDto {
   sourceHandle: string | null;
   targetHandle: string | null;
 }
+interface ApproverDto {
+  id: number;
+  position: number;
+  kind: string;
+  userId: number | null;
+  area: string | null;
+  userPosition: string | null;
+  role: string | null;
+}
 interface StepDto {
   id: number;
   position: number;
@@ -37,6 +46,7 @@ interface StepDto {
   color: string | null;
   sections: SectionDto[];
   transitions: TransitionDto[];
+  approvers: ApproverDto[];
 }
 interface WorkflowDto {
   id: number;
@@ -93,6 +103,15 @@ const toWorkflow = (dto: WorkflowDto): Workflow => {
       sourceHandle: asHandle(t.sourceHandle),
       targetHandle: asHandle(t.targetHandle),
     })),
+    approvers: (s.approvers ?? []).map((a) => ({
+      id: a.id,
+      position: a.position,
+      kind: a.kind as ApproverKind,
+      userId: a.userId,
+      area: a.area,
+      userPosition: a.userPosition,
+      role: a.role,
+    })),
   }));
   return new Workflow({
     id: dto.id,
@@ -138,6 +157,15 @@ const draftToBody = (draft: WorkflowDraft) => ({
       config: t.config ?? null,
       sourceHandle: t.sourceHandle ?? null,
       targetHandle: t.targetHandle ?? null,
+    })),
+    approvers: (s.approvers ?? []).map((a, aIdx) => ({
+      id: a.id ?? null,
+      position: aIdx,
+      kind: a.kind,
+      userId: a.userId,
+      area: a.area,
+      userPosition: a.userPosition,
+      role: a.role,
     })),
   })),
 });

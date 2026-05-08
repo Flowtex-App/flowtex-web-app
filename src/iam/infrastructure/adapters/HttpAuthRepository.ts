@@ -6,12 +6,20 @@ import type {
 } from '../../domain/ports/IAuthRepository';
 import type { Credentials } from '../../domain/models/Credentials';
 import { User, type Role } from '../../domain/models/User';
+import type { Area } from '../../domain/models/Area';
+import type { Position } from '../../domain/models/Position';
 
 interface AuthenticatedUserDto {
   id: number;
   username: string;
   email: string;
   fullName: string;
+  employeeCode?: string | null;
+  position?: Position | null;
+  positionLabel?: string | null;
+  positionSpecialty?: string | null;
+  area?: Area | null;
+  areaLabel?: string | null;
   roles: Role[];
   token: string;
 }
@@ -21,6 +29,12 @@ interface UserDto {
   username: string;
   email: string;
   fullName: string;
+  employeeCode?: string | null;
+  position?: Position | null;
+  positionLabel?: string | null;
+  positionSpecialty?: string | null;
+  area?: Area | null;
+  areaLabel?: string | null;
   roles: Role[];
 }
 
@@ -30,6 +44,12 @@ const toUser = (dto: UserDto | AuthenticatedUserDto): User =>
     username: dto.username,
     email: dto.email,
     fullName: dto.fullName,
+    employeeCode: dto.employeeCode ?? '',
+    position: dto.position ?? null,
+    positionLabel: dto.positionLabel ?? null,
+    positionSpecialty: dto.positionSpecialty ?? null,
+    area: dto.area ?? null,
+    areaLabel: dto.areaLabel ?? null,
     roles: dto.roles,
   });
 
@@ -53,6 +73,10 @@ export class HttpAuthRepository implements IAuthRepository {
       email: input.email,
       fullName: input.fullName,
       password: input.password,
+      employeeCode: input.employeeCode,
+      position: input.position,
+      positionSpecialty: input.positionSpecialty ?? null,
+      area: input.area,
     });
   }
 
