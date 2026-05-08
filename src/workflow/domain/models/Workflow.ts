@@ -20,10 +20,29 @@ export const SECTION_KIND_META: Record<SectionKind, SectionKindMeta> = {
 };
 
 export const STEP_MODE_META: Record<StepMode, { label: string; description: string }> = {
-  SEQUENTIAL: { label: 'Secuencial', description: 'Un aprobador a la vez en orden' },
-  PARALLEL:   { label: 'Paralelo',   description: 'Todos los aprobadores simultáneamente; todos deben aprobar' },
-  MAJORITY:   { label: 'Mayoría',    description: 'Aprobación si la mayoría aprueba antes del SLA' },
+  SEQUENTIAL: { label: 'Todos en orden', description: 'Cada aprobador actúa en orden; todos deben aprobar' },
+  PARALLEL:   { label: 'Todos en paralelo', description: 'Todos los aprobadores simultáneamente; todos deben aprobar' },
+  MAJORITY:   { label: 'Mayoría',    description: 'Basta que la mayoría de los aprobadores apruebe' },
 };
+
+export type ApproverKind = 'USER' | 'AREA_POSITION' | 'ROLE';
+
+export interface WorkflowStepApprover {
+  id?: number;
+  position: number;
+  kind: ApproverKind;
+  /** Si kind = USER, id del usuario asignado. */
+  userId: number | null;
+  /** Si kind = AREA_POSITION, área del filtro (ej. TECNOLOGIA). */
+  area: string | null;
+  /** Si kind = AREA_POSITION, cargo del filtro (ej. JEFE). */
+  userPosition: string | null;
+  /** Si kind = ROLE, nombre del rol legacy. */
+  role: string | null;
+  /** Cache visual: nombre completo, employeeCode resuelto en cliente. */
+  userLabel?: string;
+  userEmployeeCode?: string;
+}
 
 export const CONDITION_META: Record<ConditionKind, { label: string; hint: string; color: string }> = {
   ALWAYS:     { label: 'Siempre',         hint: 'La transición se toma sin condición',  color: '#475569' },
@@ -100,6 +119,7 @@ export interface WorkflowStep {
   color: StepColor | null;
   sections: WorkflowStepSection[];
   transitions: WorkflowStepTransition[];
+  approvers: WorkflowStepApprover[];
 }
 
 export interface WorkflowProps {
@@ -134,6 +154,7 @@ export class Workflow {
       ...s,
       sections: [...s.sections],
       transitions: [...s.transitions],
+      approvers: [...(s.approvers ?? [])],
     })));
     this.createdAt = props.createdAt;
     this.updatedAt = props.updatedAt;
@@ -173,6 +194,31 @@ export function newStep(position: number, x = 240, y = 160): WorkflowStep {
     color: null,
     sections: [],
     transitions: [],
+    approvers: [],
+  };
+}
+
+export function newApproverUser(userId: number, label?: string, employeeCode?: string, position = 0): WorkflowStepApprover {
+  return {
+    position,
+    kind: 'USER',
+    userId,
+    area: null,
+    userPosition: null,
+    role: null,
+    userLabel: label,
+    userEmployeeCode: employeeCode,
+  };
+}
+
+export function newApproverAreaPosition(area: string, userPosition: string, position = 0): WorkflowStepApprover {
+  return {
+    position,
+    kind: 'AREA_POSITION',
+    userId: null,
+    area,
+    userPosition,
+    role: null,
   };
 }
 

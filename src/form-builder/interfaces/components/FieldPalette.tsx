@@ -76,6 +76,7 @@ export function FieldPalette() {
   const [query, setQuery] = useState('');
   const [openGroups, setOpenGroups] = useState<Record<FieldGroup, boolean>>({
     LAYOUT: true,
+    AUTO: true,
     TEXTO: true,
     NUMERICO: false,
     SELECCION: false,

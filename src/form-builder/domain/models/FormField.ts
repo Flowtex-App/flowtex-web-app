@@ -15,6 +15,12 @@ export interface FormFieldProps {
   helpText?: string | null;
   position: number;
   width?: FieldWidth;
+  /** Explicit grid column (1..12). Null = flow naturally. */
+  colStart?: number | null;
+  /** Explicit grid row (1..). Null = flow naturally. */
+  rowStart?: number | null;
+  /** Vertical row span (1..6) — also feeds backend rowSpan. */
+  rowSpan?: number | null;
   options?: string | null;
 }
 
@@ -86,8 +92,12 @@ export class FormField {
 
   /** Page (wizard tab) the field belongs to. */
   readonly page: PageId;
-  /** Visual rows occupied (1-6). UI-only metadata. */
+  /** Visual rows occupied (1-6). Also persisted as `rowSpan` on backend. */
   readonly rows: number;
+  /** Explicit column start (1..12) or null when flowing naturally. */
+  readonly colStart: number | null;
+  /** Explicit row start (1..) or null when flowing naturally. */
+  readonly rowStart: number | null;
 
   constructor(props: FormFieldProps) {
     if (!props.label?.trim()) throw new Error('label is required');
@@ -108,7 +118,9 @@ export class FormField {
     this.width = clampWidth(props.width ?? 12);
     this.options = props.options ?? null;
     this.page = meta.page;
-    this.rows = meta.rows;
+    this.rows = props.rowSpan != null ? clampRows(props.rowSpan) : meta.rows;
+    this.colStart = clampOptCol(props.colStart);
+    this.rowStart = clampOptRow(props.rowStart);
   }
 
   optionsList(): string[] {
@@ -124,7 +136,7 @@ export class FormField {
   with(overrides: Partial<FormFieldProps & { page: PageId; rows: number }>): FormField {
     const nextHelp = 'helpText' in overrides ? overrides.helpText ?? null : this.helpText;
     const nextPage: PageId = overrides.page ?? this.page;
-    const nextRows = overrides.rows ?? this.rows;
+    const nextRows = overrides.rows ?? overrides.rowSpan ?? this.rows;
     const merged: EmbeddedMeta = { page: nextPage, rows: clampRows(nextRows) };
     const serialized = serializeMeta(merged, nextHelp);
 
@@ -138,9 +150,27 @@ export class FormField {
       helpText: serialized,
       position: overrides.position ?? this.position,
       width: overrides.width ?? this.width,
+      colStart: 'colStart' in overrides ? overrides.colStart : this.colStart,
+      rowStart: 'rowStart' in overrides ? overrides.rowStart : this.rowStart,
+      rowSpan: nextRows,
       options: 'options' in overrides ? overrides.options : this.options,
     });
   }
+}
+
+function clampOptCol(c: number | null | undefined): number | null {
+  if (c == null) return null;
+  const n = Math.round(c);
+  if (n < 1) return 1;
+  if (n > 12) return 12;
+  return n;
+}
+
+function clampOptRow(r: number | null | undefined): number | null {
+  if (r == null) return null;
+  const n = Math.round(r);
+  if (n < 1) return 1;
+  return n;
 }
 
 function clampWidth(w: number): FieldWidth {

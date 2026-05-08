@@ -119,7 +119,7 @@ export default function DashboardPage() {
             <div className="space-y-2.5 text-sm">
               <Row label="Disponibilidad" value="99.7%" tone="success" />
               <Row label="Tiempo medio API" value="248 ms" tone="success" />
-              <Row label="Migracion NINTEX" value="42%" tone="info" />
+              <Row label="Workflows activos" value="3" tone="info" />
               <Row label="Defectos sprint" value="3.1%" tone="success" />
             </div>
           </div>

@@ -141,6 +141,62 @@ export function Inspector({ field, pages, pageLabels, onChange, onDelete }: Prop
               ))}
             </div>
           </div>
+
+          <div className="ftx-inspector-row">
+            <label>Posición</label>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => update({ colStart: null, rowStart: null })}
+                className={[
+                  'flex-1 px-2 py-1 text-[10px] font-mono uppercase tracking-widest rounded border',
+                  field.colStart == null && field.rowStart == null
+                    ? 'border-brand bg-brand-tint text-brand'
+                    : 'border-line bg-paper text-muted hover:border-steel',
+                ].join(' ')}
+                title="El campo fluye natural en el grid"
+              >
+                auto
+              </button>
+              <button
+                onClick={() => update({ colStart: field.colStart ?? 1, rowStart: field.rowStart ?? 1 })}
+                className={[
+                  'flex-1 px-2 py-1 text-[10px] font-mono uppercase tracking-widest rounded border',
+                  field.colStart != null || field.rowStart != null
+                    ? 'border-brand bg-brand-tint text-brand'
+                    : 'border-line bg-paper text-muted hover:border-steel',
+                ].join(' ')}
+                title="Posición manual en el grid"
+              >
+                manual
+              </button>
+            </div>
+          </div>
+
+          {(field.colStart != null || field.rowStart != null) && (
+            <>
+              <div className="ftx-inspector-row">
+                <label>Col inicio</label>
+                <input
+                  type="number"
+                  min={1}
+                  max={12}
+                  value={field.colStart ?? 1}
+                  onChange={(e) => update({ colStart: Math.max(1, Math.min(12, Number(e.target.value))) })}
+                  className="ftx-input-flat font-mono"
+                />
+              </div>
+              <div className="ftx-inspector-row">
+                <label>Fila inicio</label>
+                <input
+                  type="number"
+                  min={1}
+                  value={field.rowStart ?? 1}
+                  onChange={(e) => update({ rowStart: Math.max(1, Number(e.target.value)) })}
+                  className="ftx-input-flat font-mono"
+                />
+              </div>
+            </>
+          )}
         </div>
 
         {/* Page assignment */}
@@ -218,18 +274,28 @@ export function Inspector({ field, pages, pageLabels, onChange, onDelete }: Prop
             <h4 className="ftx-inspector-title">Texto del bloque</h4>
             <div className="ftx-inspector-row">
               <label>Contenido</label>
-              <input
-                value={field.helpText ?? ''}
-                onChange={(e) => update({ helpText: e.target.value })}
-                className="ftx-input-flat"
-                placeholder={
-                  field.fieldType === 'PARAGRAPH'
-                    ? 'Texto de instruccion al usuario'
-                    : field.fieldType === 'SECTION'
-                    ? 'Subtitulo / categoria'
-                    : ''
-                }
-              />
+              {field.fieldType === 'PARAGRAPH' ? (
+                <textarea
+                  value={field.helpText ?? ''}
+                  onChange={(e) => update({ helpText: e.target.value })}
+                  className="ftx-input-flat resize-y leading-relaxed"
+                  rows={4}
+                  placeholder="Escribe varios párrafos de instrucción para el usuario. Pulsa Enter para saltos de línea."
+                />
+              ) : (
+                <input
+                  value={field.helpText ?? ''}
+                  onChange={(e) => update({ helpText: e.target.value })}
+                  className="ftx-input-flat"
+                  placeholder={
+                    field.fieldType === 'SECTION'
+                      ? 'Subtítulo / categoría'
+                      : field.fieldType === 'HEADING'
+                      ? 'Texto auxiliar bajo el encabezado'
+                      : ''
+                  }
+                />
+              )}
             </div>
           </div>
         )}

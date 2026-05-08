@@ -46,7 +46,7 @@ export default function SignInPage() {
               FLOWTEX
             </div>
             <div className="text-[11px] font-mono uppercase tracking-[0.25em] text-white/55">
-              Form Operations / Hitss
+              Form Operations · Claro
             </div>
           </div>
         </div>
@@ -64,19 +64,19 @@ export default function SignInPage() {
             sin esperar.
           </h1>
           <p className="mt-6 text-[15px] text-white/75 max-w-md leading-relaxed">
-            Plataforma de formularios y flujos de aprobación para el área de
-            Tecnología de Claro Perú. Operada por Hitss.
+            Plataforma interna de formularios y flujos de aprobación para el
+            área de Tecnología de Claro Perú.
           </p>
 
           <div className="mt-10 grid grid-cols-3 gap-3">
             <Stat label="Forms" value="6" hint="activos" />
-            <Stat label="Migración" value="42%" hint="oleada 3" />
+            <Stat label="Workflows" value="3" hint="publicados" />
             <Stat label="Uptime" value="99.7%" hint="30d" />
           </div>
         </div>
 
         <div className="relative flex items-center justify-between text-[11px] text-white/45 font-mono">
-          <span>Hitss Perú · Claro Perú</span>
+          <span>Claro Perú</span>
           <span className="flex items-center gap-2">
             <span className="size-1 rounded-full bg-white/40" />
             ISO 12207 · 27001
