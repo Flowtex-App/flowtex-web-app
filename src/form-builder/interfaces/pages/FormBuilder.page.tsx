@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import {
   ArrowLeft, Save, Send, MousePointerClick, Eye, SlidersHorizontal, Layers,
+  GitBranch, FileText, Rocket,
 } from 'lucide-react';
 import {
   DndContext, DragOverlay, KeyboardSensor, PointerSensor,
@@ -26,11 +27,14 @@ import { FormPreview } from '../components/FormPreview';
 import { Inspector } from '../components/Inspector';
 import { StepTabs } from '../components/StepTabs';
 import { ContextChatbot } from '../components/ContextChatbot';
-import { WorkflowRail } from '../components/WorkflowRail';
 import { useFormsStore } from '../stores/forms.store';
+import { WorkflowCanvas } from '@/workflow/interfaces/components/WorkflowCanvas';
+import type { FormContext } from '@/workflow/domain/models/FormContext';
+import { useWorkflowStore } from '@/workflow/interfaces/stores/workflow.store';
 
 const CANVAS_DROP_ID = 'canvas-drop-zone';
 type RightTab = 'inspector' | 'preview';
+type MainTab = 'structure' | 'approval';
 
 function fieldSortableId(field: FormField, index: number): string {
   return field.id ? `field:${field.id}` : `field:tmp-${field.fieldKey}-${index}`;
@@ -102,6 +106,11 @@ export default function FormBuilderPage() {
   const [selectedKey, setSelectedKey] = useState<string | null>(null);
   const [rightTab, setRightTab] = useState<RightTab>('inspector');
   const [activePage, setActivePage] = useState<PageId>(DEFAULT_PAGE_ID);
+  const [mainTab, setMainTab] = useState<MainTab>('structure');
+  const [publishingAll, setPublishingAll] = useState(false);
+
+  const publishWorkflowOne = useWorkflowStore((s) => s.publishOne);
+  const currentWorkflow = useWorkflowStore((s) => s.current);
 
   const canvasInnerRef = useRef<HTMLDivElement | null>(null);
   const [canvasWidthPx, setCanvasWidthPx] = useState(900);
@@ -301,10 +310,65 @@ export default function FormBuilderPage() {
     setSavedNotice('Formulario publicado');
   };
 
+  /**
+   * Publica formulario + workflow vinculado en un solo click:
+   *   1) Guarda el form si tiene cambios pendientes.
+   *   2) Si el form tiene workflow linkeado y no está PUBLISHED, lo publica.
+   *   3) Publica el form.
+   *
+   * El editor de workflow ya guarda + auto-linkea cuando el usuario aprieta
+   * "Guardar flujo" desde la pestaña Aprobaciones, así que aquí solo cerramos
+   * el ciclo con los publishes.
+   */
+  const onPublishAll = async () => {
+    if (!formId) return;
+    if (!confirm('Publicar formulario y flujo de aprobación juntos. ¿Continuar?')) return;
+    setPublishingAll(true);
+    try {
+      // Guarda primero por si hay edits sin commitear
+      await saveForm({ id: formId, draft: { title, description, context, fields } });
+      const wfId = current?.workflowId;
+      if (wfId && currentWorkflow?.id === wfId && currentWorkflow.status !== 'PUBLISHED') {
+        await publishWorkflowOne(wfId);
+      }
+      await publishForm(formId);
+      setSavedNotice('Formulario y flujo publicados');
+    } finally {
+      setPublishingAll(false);
+    }
+  };
+
   const selected = useMemo(
     () => fields.find((f) => f.fieldKey === selectedKey) ?? null,
     [fields, selectedKey],
   );
+
+  /**
+   * Contexto que pasamos al editor de workflow para que el modal de transición
+   * pueda ofrecer dropdowns de fieldKeys/options en condiciones CUSTOM.
+   * Re-construido cada vez que cambian los fields.
+   */
+  const formContext = useMemo<FormContext>(() => ({
+    fields: fields
+      .filter((f) => !FIELD_TYPE_META[f.fieldType].presentational)
+      .map((f) => ({
+        fieldKey: f.fieldKey,
+        label: f.label,
+        fieldType: f.fieldType,
+        options: parseOptionsList(f.options),
+      })),
+  }), [fields]);
+
+  /**
+   * Cuando el editor de workflow guarda (desde la pestaña Aprobaciones),
+   * si el form todavía no está linkeado a ese workflow, lo enlazamos
+   * automáticamente para que el usuario no tenga que recordarlo.
+   */
+  const onWorkflowSaved = async (saved: { id: number }) => {
+    if (formId && current && current.workflowId !== saved.id) {
+      await linkWorkflow(formId, saved.id);
+    }
+  };
 
   return (
     <AppShell fitViewport>
@@ -368,7 +432,48 @@ export default function FormBuilderPage() {
                 Publicar
               </Button>
             )}
+            {!isNew && current?.workflowId && current?.status !== 'PUBLISHED' && (
+              <Button
+                onClick={onPublishAll}
+                disabled={publishingAll}
+                icon={<Rocket size={14} />}
+                className="text-xs py-1.5 px-3 !text-success !border-success/40 hover:!bg-success/5"
+                title="Publica formulario y flujo de aprobación a la vez"
+              >
+                {publishingAll ? 'Publicando...' : 'Publicar todo'}
+              </Button>
+            )}
           </div>
+
+          {/* Main tabs: Estructura | Aprobaciones */}
+          {!isNew && (
+            <div
+              className="flex shrink-0 px-4"
+              style={{ background: 'var(--ftx-paper)', borderBottom: '1px solid var(--ftx-line)' }}
+            >
+              <MainTabBtn
+                active={mainTab === 'structure'}
+                onClick={() => setMainTab('structure')}
+                icon={<FileText size={13} />}
+                label="Estructura"
+                hint={`${fields.length} campos`}
+              />
+              <MainTabBtn
+                active={mainTab === 'approval'}
+                onClick={() => setMainTab('approval')}
+                icon={<GitBranch size={13} />}
+                label="Aprobaciones"
+                hint={
+                  current?.workflowId
+                    ? (currentWorkflow?.id === current.workflowId
+                        ? `${currentWorkflow.steps.length} pasos`
+                        : 'workflow linkeado')
+                    : 'sin flujo'
+                }
+                accent={current?.workflowId ? 'var(--ftx-info)' : 'var(--ftx-muted)'}
+              />
+            </div>
+          )}
 
           {/* Notices */}
           {(error || savedNotice) && (
@@ -392,7 +497,8 @@ export default function FormBuilderPage() {
             <div className="px-4 py-2 text-muted text-xs">Cargando formulario...</div>
           )}
 
-          {/* Three-column workspace */}
+          {/* Three-column workspace — tab "Estructura" */}
+          {mainTab === 'structure' && (
           <div className="flex-1 grid grid-cols-1 lg:grid-cols-[260px_minmax(0,1fr)_360px] xl:grid-cols-[280px_minmax(0,1fr)_400px] gap-0 min-h-0 overflow-hidden">
             {/* LEFT: Palette */}
             <aside
@@ -473,13 +579,14 @@ export default function FormBuilderPage() {
                   <span>arrastra borde derecho ↔ ancho · borde inferior ↕ alto</span>
                 </div>
 
-                {/* Workflow rail — flujo de aprobación enlazado */}
-                <WorkflowRail
-                  formId={formId}
+                {/* Resumen ligero del flujo enlazado — la edición real está en la pestaña Aprobaciones */}
+                <FlowLinkSummary
                   workflowId={current?.workflowId ?? null}
-                  onLink={async (wfId) => {
+                  onEditFlow={() => setMainTab('approval')}
+                  onUnlink={async () => {
                     if (!formId) return;
-                    await linkWorkflow(formId, wfId);
+                    if (!confirm('¿Desenlazar el flujo de aprobación?')) return;
+                    await linkWorkflow(formId, null);
                   }}
                 />
               </div>
@@ -537,6 +644,20 @@ export default function FormBuilderPage() {
               </div>
             </aside>
           </div>
+          )}
+
+          {/* Workflow workspace — tab "Aprobaciones" */}
+          {mainTab === 'approval' && (
+            <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
+              <WorkflowCanvas
+                workflowId={current?.workflowId ?? null}
+                formContext={formContext}
+                defaultName={title ? `Flujo de "${title}"` : undefined}
+                onSaved={onWorkflowSaved}
+                hideToolbar={false}
+              />
+            </div>
+          )}
         </div>
 
         <DragOverlay dropAnimation={null}>
@@ -610,26 +731,129 @@ function TabBtn({
   );
 }
 
+function MainTabBtn({
+  active, onClick, icon, label, hint, accent,
+}: {
+  active: boolean;
+  onClick: () => void;
+  icon: React.ReactNode;
+  label: string;
+  hint?: string;
+  accent?: string;
+}) {
+  return (
+    <button
+      onClick={onClick}
+      className={[
+        'px-5 py-2.5 text-sm flex items-center gap-2 transition-colors',
+        active ? 'text-ink' : 'text-muted hover:text-ink',
+      ].join(' ')}
+      style={{
+        borderBottom: active
+          ? `2px solid ${accent ?? 'var(--ftx-brand)'}`
+          : '2px solid transparent',
+      }}
+    >
+      <span style={{ color: active ? (accent ?? 'var(--ftx-brand)') : 'inherit' }}>{icon}</span>
+      <span className="font-display font-bold">{label}</span>
+      {hint && (
+        <span className="text-[10px] font-mono uppercase tracking-widest text-muted">
+          {hint}
+        </span>
+      )}
+    </button>
+  );
+}
+
+/**
+ * Resumen ligero del flujo enlazado dentro del tab Estructura.
+ * No deja editar nada — solo muestra estado y un botón para saltar al editor
+ * en la pestaña Aprobaciones.
+ */
+function FlowLinkSummary({
+  workflowId, onEditFlow, onUnlink,
+}: {
+  workflowId: number | null;
+  onEditFlow: () => void;
+  onUnlink: () => void;
+}) {
+  if (!workflowId) {
+    return (
+      <div className="ftx-rail p-3 mt-3 flex items-center gap-2.5">
+        <GitBranch size={14} style={{ color: 'var(--ftx-muted)' }} />
+        <div className="flex-1 min-w-0">
+          <div className="font-mono text-[10px] uppercase tracking-widest text-muted">
+            sin flujo de aprobación
+          </div>
+          <div className="text-[12px] text-ink-2 mt-0.5">
+            El formulario se enviará directamente al estado final.
+            Crea un flujo en la pestaña <span className="text-info">Aprobaciones</span>.
+          </div>
+        </div>
+        <Button onClick={onEditFlow} className="!text-xs !py-1 !px-2.5" icon={<GitBranch size={12} />}>
+          Crear flujo
+        </Button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="ftx-rail p-3 mt-3 flex items-center gap-2.5">
+      <GitBranch size={14} style={{ color: 'var(--ftx-info)' }} />
+      <div className="flex-1 min-w-0">
+        <div className="font-mono text-[10px] uppercase tracking-widest text-info">
+          flujo de aprobación enlazado · #{workflowId}
+        </div>
+        <div className="text-[12px] text-ink-2 mt-0.5">
+          Edita los pasos, aprobadores y condiciones en la pestaña
+          <span className="text-info"> Aprobaciones</span>.
+        </div>
+      </div>
+      <Button onClick={onEditFlow} className="!text-xs !py-1 !px-2.5">Abrir →</Button>
+      <Button onClick={onUnlink} className="!text-xs !py-1 !px-2.5 !text-brand !border-brand/30">
+        Desenlazar
+      </Button>
+    </div>
+  );
+}
+
+function parseOptionsList(raw: string | null | undefined): string[] | undefined {
+  if (!raw) return undefined;
+  try {
+    const arr = JSON.parse(raw);
+    if (Array.isArray(arr)) return arr.map(String);
+  } catch {
+    /* ignore */
+  }
+  const split = raw.split(',').map((s) => s.trim()).filter(Boolean);
+  return split.length > 0 ? split : undefined;
+}
+
 const labelForType = (type: FieldType): string => {
   const labels: Record<FieldType, string> = {
-    HEADING: 'Encabezado de seccion',
-    PARAGRAPH: 'Parrafo de instrucciones',
-    SECTION: 'Nueva seccion',
-    DIVIDER: 'Divisor',
-    TEXT: 'Texto',
-    TEXTAREA: 'Descripcion',
-    NUMBER: 'Numero',
-    EMAIL: 'Correo electronico',
-    DATE: 'Fecha',
-    DATETIME: 'Fecha y hora',
-    SELECT: 'Seleccion',
-    MULTI_SELECT: 'Multi-seleccion',
-    RADIO: 'Opcion unica',
-    CHECKBOX: 'Confirmacion',
-    FILE: 'Adjunto',
-    URL: 'URL',
-    PHONE: 'Telefono',
-    SIGNATURE: 'Firma',
+    HEADING:    'Encabezado de sección',
+    PARAGRAPH:  'Párrafo de instrucciones',
+    SECTION:    'Nueva sección',
+    DIVIDER:    'Divisor',
+    SPACER:     'Espacio',
+    AUTO_USER_NAME:     'Nombre completo (auto)',
+    AUTO_EMPLOYEE_CODE: 'Código de empleado (auto)',
+    AUTO_POSITION:      'Cargo (auto)',
+    AUTO_AREA:          'Área (auto)',
+    TEXT:       'Texto',
+    TEXTAREA:   'Descripción',
+    NUMBER:     'Número',
+    EMAIL:      'Correo electrónico',
+    DATE:       'Fecha',
+    DATETIME:   'Fecha y hora',
+    SELECT:     'Selección',
+    MULTI_SELECT: 'Multi-selección',
+    RADIO:      'Opción única',
+    CHECKBOX:   'Confirmación',
+    FILE:       'Adjunto',
+    URL:        'URL',
+    PHONE:      'Teléfono',
+    SIGNATURE:  'Firma',
   };
   return labels[type];
 };
