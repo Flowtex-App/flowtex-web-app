@@ -4,7 +4,7 @@ import {
   type WorkflowStep, type WorkflowStepSection, type WorkflowStepApprover, type ApproverKind,
   type SectionKind, type StepMode, type StepColor,
   DEFAULT_ROLES, SECTION_KIND_META, STEP_MODE_META, STEP_COLORS, colorMeta, newSection,
-  newApproverUser, newApproverAreaPosition,
+  newApproverAreaPosition,
 } from '../../domain/models/Workflow';
 import { AREAS } from '@/iam/domain/models/Area';
 import { POSITIONS } from '@/iam/domain/models/Position';
