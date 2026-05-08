@@ -2,7 +2,7 @@ import { type ReactNode, useState, useRef, useEffect } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import {
   LogOut, Inbox, FileSpreadsheet, Search, FolderKanban,
-  GitBranch, Users, ChevronDown, ChevronRight, Menu, X, Layers,
+  Users, ChevronDown, ChevronRight, Menu, X, Layers,
   Building2, Briefcase, BadgeCheck, Shield, ChevronUp, Plus,
 } from 'lucide-react';
 import { useAuthStore } from '@/iam/interfaces/stores/auth.store';
@@ -45,7 +45,6 @@ const navGroups: NavGroup[] = [
     items: [
       { to: '/forms',     label: 'Formularios',  icon: <FolderKanban size={14} /> },
       { to: '/forms/new', label: 'Nuevo form',   icon: <Plus size={14} /> },
-      { to: '/workflows', label: 'Workflows',    icon: <GitBranch size={14} /> },
     ],
   },
   {

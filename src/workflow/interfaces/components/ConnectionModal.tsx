@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react';
 import { X, Link2 } from 'lucide-react';
 import { CONDITION_META, type ConditionKind } from '../../domain/models/Workflow';
+import type { FormContext } from '../../domain/models/FormContext';
+import { CustomConditionBuilder } from './CustomConditionBuilder';
 
 interface Props {
   open: boolean;
@@ -12,6 +14,11 @@ interface Props {
     label: string;
     config: string | null;
   };
+  /**
+   * Cuando el editor está embebido dentro del FormBuilder, recibe el contexto
+   * del formulario para ofrecer dropdowns de fieldKeys/options en CUSTOM.
+   */
+  formContext?: FormContext;
   onSubmit: (payload: { conditionKind: ConditionKind; label: string; config: string | null }) => void;
   onCancel: () => void;
   onDelete?: () => void;
@@ -20,17 +27,17 @@ interface Props {
 const CONDITIONS: ConditionKind[] = ['ALWAYS', 'ON_APPROVE', 'ON_REJECT', 'ON_RETURN', 'CUSTOM'];
 
 export function ConnectionModal({
-  open, fromLabel, toLabel, initial, onSubmit, onCancel, onDelete,
+  open, fromLabel, toLabel, initial, formContext, onSubmit, onCancel, onDelete,
 }: Props) {
   const [conditionKind, setConditionKind] = useState<ConditionKind>('ALWAYS');
   const [label, setLabel] = useState('');
-  const [config, setConfig] = useState('');
+  const [config, setConfig] = useState<string | null>(null);
 
   useEffect(() => {
     if (open) {
       setConditionKind(initial?.conditionKind ?? 'ALWAYS');
       setLabel(initial?.label ?? '');
-      setConfig(initial?.config ?? '');
+      setConfig(initial?.config ?? null);
     }
   }, [open, initial]);
 
@@ -40,9 +47,11 @@ export function ConnectionModal({
     onSubmit({
       conditionKind,
       label: label.trim(),
-      config: conditionKind === 'CUSTOM' ? (config.trim() || null) : null,
+      config: conditionKind === 'CUSTOM' ? config : null,
     });
   };
+
+  const useVisualBuilder = !!formContext;
 
   return (
     <div
@@ -61,7 +70,7 @@ export function ConnectionModal({
       <div
         onClick={(e) => e.stopPropagation()}
         className="ftx-card overflow-hidden"
-        style={{ background: 'var(--ftx-paper)', width: 'min(480px, calc(100vw - 2rem))' }}
+        style={{ background: 'var(--ftx-paper)', width: 'min(560px, calc(100vw - 2rem))' }}
       >
         <header
           className="px-4 py-3 flex items-center gap-2"
@@ -93,7 +102,7 @@ export function ConnectionModal({
           </button>
         </header>
 
-        <div className="p-4 space-y-3">
+        <div className="p-4 space-y-3 max-h-[70vh] overflow-y-auto">
           <div>
             <div className="font-mono text-[9px] uppercase tracking-widest text-muted mb-1.5">
               ¿Cuándo se toma este camino?
@@ -135,26 +144,35 @@ export function ConnectionModal({
             <input
               value={label}
               onChange={(e) => setLabel(e.target.value)}
-              placeholder="Ej. Aprobado por TI"
+              placeholder="Ej. Compras"
               className="ftx-input-flat mt-1 text-[13px]"
             />
             <span className="block text-[10px] text-muted mt-1">
-              Se muestra junto a la flecha en el diagrama.
+              Aparece junto a la flecha en el diagrama.
             </span>
           </label>
 
-          {conditionKind === 'CUSTOM' && (
+          {conditionKind === 'CUSTOM' && useVisualBuilder && formContext && (
+            <CustomConditionBuilder
+              context={formContext}
+              value={config}
+              onChange={setConfig}
+            />
+          )}
+
+          {conditionKind === 'CUSTOM' && !useVisualBuilder && (
             <label className="block">
-              <span className="text-[11px] font-medium text-ink-2">Expresión personalizada</span>
+              <span className="text-[11px] font-medium text-ink-2">Expresión (JSON)</span>
               <textarea
-                value={config}
-                onChange={(e) => setConfig(e.target.value)}
+                value={config ?? ''}
+                onChange={(e) => setConfig(e.target.value || null)}
                 rows={2}
-                placeholder='monto > 5000 && area === "TI"'
+                placeholder='{"field":"tipo_solicitud","operator":"EQUALS","value":"compra"}'
                 className="ftx-input-flat font-mono text-[12px] mt-1 resize-y"
               />
               <span className="block text-[10px] text-muted mt-1">
-                Sintaxis a definir en el motor de reglas. Por ahora se guarda como texto.
+                Edita el workflow desde dentro de un formulario para tener
+                autocompletado de campos y operadores.
               </span>
             </label>
           )}
