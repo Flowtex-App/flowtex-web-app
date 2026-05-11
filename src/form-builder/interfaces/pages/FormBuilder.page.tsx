@@ -41,6 +41,23 @@ function fieldSortableId(field: FormField, index: number): string {
   return field.id ? `field:${field.id}` : `field:tmp-${field.fieldKey}-${index}`;
 }
 
+/**
+ * Primera fila libre dentro de una página: justo debajo del campo más bajo
+ * (sea posicionado explícitamente o en auto-flow). Devuelve 1 cuando la
+ * página está vacía. Usada al añadir campos por vías que no implican un
+ * drop sobre celda concreta (chatbot, paleta → campo, placeholder de página),
+ * para que el campo no se vaya al fondo del grid por auto-flow de CSS.
+ */
+function nextFreeRow(fields: FormField[], page: PageId): number {
+  const pageFields = fields.filter((f) => f.page === page);
+  const placedBottoms = pageFields
+    .filter((f) => f.rowStart != null)
+    .map((f) => (f.rowStart ?? 1) + (f.rows ?? 1) - 1);
+  const flowingCount = pageFields.filter((f) => f.rowStart == null).length;
+  const used = Math.max(flowingCount, ...placedBottoms, 0);
+  return used + 1;
+}
+
 /** Grid row height in pixels — single source of truth for the canvas. */
 const GRID_ROW_PX = 80;
 /** Min rows to show even on empty pages. */
@@ -441,9 +458,15 @@ export default function FormBuilderPage() {
     // ── Caso 2: drop sobre otro field (mantiene reorder secuencial) ─────
     if (activeId.startsWith(PALETTE_DRAG_PREFIX)) {
       const type = activeId.replace(PALETTE_DRAG_PREFIX, '') as FieldType;
-      const next = buildField(type);
+      const base = buildField(type);
       const overField = visibleFields.find((f, i) => fieldSortableId(f, i) === overId);
       const globalIndex = overField ? fields.indexOf(overField) + 1 : fields.length;
+      // Anclar visualmente justo debajo del campo sobre el que se soltó.
+      // Sin esto, el campo nuevo quedaba en auto-flow y se iba al fondo del grid.
+      const targetRow = overField?.rowStart != null
+        ? (overField.rowStart ?? 1) + (overField.rows ?? 1)
+        : nextFreeRow(fields, activePage);
+      const next = base.with({ colStart: 1, rowStart: targetRow });
       const newFields = [...fields];
       newFields.splice(globalIndex, 0, next);
       setFields(newFields.map((f, i) => f.with({ position: i })));
@@ -478,7 +501,9 @@ export default function FormBuilderPage() {
   const addPage = () => {
     const newId = nextPageId(pages.map((p) => p.id));
     setActivePage(newId);
-    // Create an empty section as a placeholder so the page exists
+    // Create an empty section as a placeholder so the page exists.
+    // El placeholder se ancla en (1,1) para que la nueva página no arranque
+    // con un campo "flotante" que CSS Grid pueda mover al fondo.
     const placeholder = new FormField({
       label: `Sección ${pages.length + 1}`,
       fieldKey: slugifyFieldKey(`section ${pages.length + 1}`),
@@ -486,6 +511,8 @@ export default function FormBuilderPage() {
       required: false,
       position: fields.length,
       width: 12,
+      colStart: 1,
+      rowStart: 1,
     }).with({ page: newId });
     setFields([...fields, placeholder]);
   };
@@ -501,10 +528,16 @@ export default function FormBuilderPage() {
   };
 
   const addFieldFromAi = (field: FormField) => {
+    // Anclar el campo sugerido a una celda explícita (col 1, primera fila
+    // libre de la página activa). Sin esto el campo entra en auto-flow y
+    // se cuela en cualquier hueco vacío del grid — típicamente al fondo.
+    const targetRow = nextFreeRow(fields, activePage);
     const next = field
       .with({
         position: fields.length,
         width: field.width ?? (FIELD_TYPE_META[field.fieldType].defaultWidth as FieldWidth),
+        colStart: 1,
+        rowStart: targetRow,
       })
       .with({ page: activePage });
     setFields([...fields, next]);
