@@ -58,6 +58,32 @@ function nextFreeRow(fields: FormField[], page: PageId): number {
   return used + 1;
 }
 
+/**
+ * Migra al vuelo los campos legacy que vienen sin colStart/rowStart desde
+ * el backend. Por página, los apila secuencialmente (col 1, fila tras fila)
+ * empezando *después* de la fila más baja ocupada por campos ya posicionados.
+ * Preserva el orden del array (que coincide con `position`), así que los
+ * campos quedan donde el usuario espera leer un formulario: de arriba abajo.
+ * Sin esto, CSS Grid los empujaba al fondo del canvas por auto-flow.
+ */
+function anchorFloatingFields(fields: FormField[]): FormField[] {
+  // Calcular fila inicial por página (debajo de los campos ya posicionados).
+  const nextRowByPage = new Map<PageId, number>();
+  for (const f of fields) {
+    if (f.rowStart == null) continue;
+    const bottom = (f.rowStart ?? 1) + (f.rows ?? 1);
+    const current = nextRowByPage.get(f.page) ?? 1;
+    if (bottom > current) nextRowByPage.set(f.page, bottom);
+  }
+
+  return fields.map((f) => {
+    if (f.colStart != null && f.rowStart != null) return f;
+    const row = nextRowByPage.get(f.page) ?? 1;
+    nextRowByPage.set(f.page, row + (f.rows ?? 1));
+    return f.with({ colStart: 1, rowStart: row });
+  });
+}
+
 /** Grid row height in pixels — single source of truth for the canvas. */
 const GRID_ROW_PX = 80;
 /** Min rows to show even on empty pages. */
@@ -242,7 +268,10 @@ export default function FormBuilderPage() {
       setTitle(current.title);
       setDescription(current.description ?? '');
       setContext(current.context ?? '');
-      setFields([...current.fields]);
+      // Anclar campos legacy en su carga inicial para que el layout sea
+      // determinista (ver `anchorFloatingFields`). El cambio se persiste
+      // en el siguiente guardado natural del usuario.
+      setFields(anchorFloatingFields([...current.fields]));
     }
   }, [current, isNew]);
 
@@ -302,11 +331,14 @@ export default function FormBuilderPage() {
 
   useEffect(() => {
     if (current && !isNew) {
+      // El baseline debe reflejar el estado *anclado* para que la migración
+      // automática no aparezca como "cambios sin guardar". Cuando el usuario
+      // edite algo real, los anchors se irán como parte del payload natural.
       savedSnapshot.current = snapshot(
         current.title,
         current.description ?? '',
         current.context ?? '',
-        [...current.fields],
+        anchorFloatingFields([...current.fields]),
       );
       setDirty(false);
     }
