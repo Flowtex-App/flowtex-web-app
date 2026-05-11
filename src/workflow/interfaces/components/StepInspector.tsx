@@ -17,6 +17,11 @@ interface Props {
   onDelete: () => void;
 }
 
+// La sección DECISION se omite del catálogo: las opciones de aprobar / rechazar
+// se derivan automáticamente de las flechas salientes del nodo en el canvas.
+const ADDABLE_SECTION_KINDS: SectionKind[] = (Object.keys(SECTION_KIND_META) as SectionKind[])
+  .filter((k) => k !== 'DECISION');
+
 export function StepInspector({ step, onChange, onDelete }: Props) {
   if (!step) {
     return (
@@ -100,6 +105,14 @@ export function StepInspector({ step, onChange, onDelete }: Props) {
               {step.sections.length} {step.sections.length === 1 ? 'sección' : 'secciones'}
             </span>
           )}
+          <div className="flex-1" />
+          <button
+            onClick={onDelete}
+            className="ftx-btn ftx-btn-danger !text-[10px] !py-1 !px-2"
+            title="Eliminar este paso del flujo"
+          >
+            <Trash2 size={11} /> Eliminar
+          </button>
         </div>
       </div>
 
@@ -252,6 +265,7 @@ export function StepInspector({ step, onChange, onDelete }: Props) {
           </div>
           <p className="px-3 pb-2 text-[10px] text-muted leading-snug">
             Aparecen <span className="text-ink">debajo del formulario</span> cuando este paso está activo.
+            La <span className="text-ink">decisión</span> se construye automáticamente desde las flechas que salen del nodo.
           </p>
 
           <div className="px-3 space-y-1.5">
@@ -270,7 +284,7 @@ export function StepInspector({ step, onChange, onDelete }: Props) {
               añadir
             </div>
             <div className="grid grid-cols-3 gap-1">
-              {(Object.keys(SECTION_KIND_META) as SectionKind[]).map((kind) => {
+              {ADDABLE_SECTION_KINDS.map((kind) => {
                 const meta = SECTION_KIND_META[kind];
                 return (
                   <button
@@ -290,15 +304,13 @@ export function StepInspector({ step, onChange, onDelete }: Props) {
       </div>
 
       <div
-        className="px-3 py-2.5 flex items-center justify-between"
+        className="px-3 py-2 flex items-center"
         style={{ borderTop: '1px solid var(--ftx-line)', background: 'var(--ftx-cream)' }}
       >
         <span className="font-mono text-[10px] text-muted">
           {step.transitions.length} {step.transitions.length === 1 ? 'salida' : 'salidas'}
+          {step.transitions.length > 0 && ' — cada flecha es una decisión'}
         </span>
-        <button onClick={onDelete} className="ftx-btn ftx-btn-danger !text-xs !py-1 !px-2">
-          <Trash2 size={11} /> Eliminar paso
-        </button>
       </div>
     </div>
   );

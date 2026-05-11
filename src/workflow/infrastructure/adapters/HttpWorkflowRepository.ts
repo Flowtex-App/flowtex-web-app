@@ -32,6 +32,8 @@ interface ApproverDto {
   area: string | null;
   userPosition: string | null;
   role: string | null;
+  userLabel: string | null;
+  userEmployeeCode: string | null;
 }
 interface StepDto {
   id: number;
@@ -111,6 +113,8 @@ const toWorkflow = (dto: WorkflowDto): Workflow => {
       area: a.area,
       userPosition: a.userPosition,
       role: a.role,
+      userLabel: a.userLabel ?? undefined,
+      userEmployeeCode: a.userEmployeeCode ?? undefined,
     })),
   }));
   return new Workflow({
