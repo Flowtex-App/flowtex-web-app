@@ -1,12 +1,13 @@
 import { type ReactNode, useState, useRef, useEffect } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import {
-  LogOut, Inbox, FileSpreadsheet, Search, FolderKanban,
+  Repeat, Inbox, FileSpreadsheet, Search, FolderKanban,
   Users, ChevronDown, ChevronRight, Menu, X, Layers,
   Building2, Briefcase, BadgeCheck, Shield, ChevronUp, Plus,
 } from 'lucide-react';
 import { useAuthStore } from '@/iam/interfaces/stores/auth.store';
 import { ThemeMenu } from '@/shared/ui/theme/ThemeMenu';
+import { DEMO_PERSONAS, DEMO_PASSWORD } from '@/iam/demo/personas';
 
 interface AppShellProps {
   children: ReactNode;
@@ -57,7 +58,7 @@ const navGroups: NavGroup[] = [
 ];
 
 export function AppShell({ children, fitViewport = false }: AppShellProps) {
-  const { user, signOut } = useAuthStore();
+  const { user, signIn } = useAuthStore();
   const navigate = useNavigate();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [collapsedGroups, setCollapsedGroups] = useState<Record<string, boolean>>({});
@@ -74,10 +75,9 @@ export function AppShell({ children, fitViewport = false }: AppShellProps) {
     return () => document.removeEventListener('mousedown', onClick);
   }, []);
 
-  const onSignOut = async () => {
+  const onActAs = async (username: string) => {
     setUserMenuOpen(false);
-    await signOut();
-    navigate('/sign-in');
+    await signIn(username, DEMO_PASSWORD);
   };
 
   const toggleGroup = (id: string) =>
@@ -204,13 +204,26 @@ export function AppShell({ children, fitViewport = false }: AppShellProps) {
                     label={user.roles.map((r) => r.replace('ROLE_', '')).join(' · ') || '—'}
                   />
                 </div>
-                <button
-                  onClick={onSignOut}
-                  className="w-full flex items-center gap-2 px-3 py-2.5 text-[12px] text-ink hover:bg-cream"
-                >
-                  <LogOut size={13} className="text-brand" />
-                  Cerrar sesión
-                </button>
+                <div className="px-3 pt-2 pb-1">
+                  <div className="text-[10px] font-mono uppercase tracking-widest text-muted flex items-center gap-1.5">
+                    <Repeat size={11} className="text-brand" /> actuar como (demo)
+                  </div>
+                </div>
+                <div className="max-h-60 overflow-y-auto pb-1">
+                  {DEMO_PERSONAS.filter((p) => p.username !== user.username).map((p) => (
+                    <button
+                      key={p.key}
+                      onClick={() => onActAs(p.username)}
+                      className="w-full flex items-center gap-2 px-3 py-2 text-left text-[12px] text-ink hover:bg-cream"
+                    >
+                      <Users size={13} className="text-muted shrink-0" />
+                      <span className="flex-1 min-w-0 leading-tight">
+                        <span className="block truncate">{p.label}</span>
+                        <span className="block text-[10px] text-muted truncate">{p.roleLabel}</span>
+                      </span>
+                    </button>
+                  ))}
+                </div>
               </div>
             )}
           </div>
