@@ -447,19 +447,22 @@ function UserApproverRow({
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    if (!searchOpen || query.trim().length < 2) {
+    if (!searchOpen) {
       setResults([]);
       return;
     }
+    // Con query >= 2 busca; sin query, muestra la lista de usuarios para elegir
+    // (antes exigia escribir y no habia forma de "ver la lista para anadir usuarios").
+    const hasQuery = query.trim().length >= 2;
     const t = setTimeout(async () => {
       setLoading(true);
       try {
-        const users = await iamPorts.userRepository.list({ q: query });
-        setResults(users.slice(0, 8));
+        const users = await iamPorts.userRepository.list(hasQuery ? { q: query } : undefined);
+        setResults(users.slice(0, 12));
       } finally {
         setLoading(false);
       }
-    }, 220);
+    }, hasQuery ? 220 : 0);
     return () => clearTimeout(t);
   }, [query, searchOpen]);
 

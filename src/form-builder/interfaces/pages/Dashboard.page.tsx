@@ -110,7 +110,7 @@ export default function DashboardPage() {
             <div className="space-y-2">
               <QuickAction to="/forms/new" icon={<Plus size={14} />} label="Crear formulario" />
               <QuickAction to="/forms" icon={<FileText size={14} />} label="Ver biblioteca" />
-              <QuickAction to="/dashboard" icon={<Clock size={14} />} label="Solicitudes pendientes" />
+              <QuickAction to="/submissions?scope=assigned" icon={<Clock size={14} />} label="Solicitudes pendientes" />
             </div>
           </div>
 

@@ -1,16 +1,18 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import {
-  ArrowLeft, Printer, CheckCircle2, XCircle, RotateCcw, Save, Send, History,
+  ArrowLeft, Printer, CheckCircle2, XCircle, RotateCcw, Save, Send, History, Repeat,
 } from 'lucide-react';
 import { AppShell } from '@/shared/ui/components/AppShell';
 import { Button } from '@/shared/ui/components/Button';
 import { useAuthStore } from '@/iam/interfaces/stores/auth.store';
+import type { Role } from '@/iam/domain/models/User';
+import { personaForStep, DEMO_PASSWORD } from '@/iam/demo/personas';
 import { useSubmissionsStore } from '../stores/submissions.store';
 import { Timeline } from '../components/Timeline';
 import { FormFiller } from '../components/FormFiller';
 import {
-  STATUS_LABEL, type Decision,
+  STATUS_LABEL, type Decision, type SubmissionStepExecution,
 } from '../../domain/models/Submission';
 
 /**
@@ -27,6 +29,7 @@ export default function SubmissionDetailPage() {
   const submissionId = id ? Number(id) : null;
   const navigate = useNavigate();
   const me = useAuthStore((s) => s.user);
+  const signIn = useAuthStore((s) => s.signIn);
 
   const { current, loading, error, saving, loadOne, saveData, decide, resubmit, cancel } = useSubmissionsStore();
   const [editing, setEditing] = useState(false);
@@ -42,14 +45,36 @@ export default function SubmissionDetailPage() {
     if (current) setValues({ ...(current.data as Record<string, unknown>) });
   }, [current]);
 
+  // Un paso es "mío" si la asignacion coincide por usuario, por rol (tengo el rol)
+  // o por area/cargo. Antes solo miraba assignedUserId, por eso los pasos
+  // asignados por ROL nunca mostraban los botones de decision.
   const myExec = useMemo(() => {
     if (!current || !me) return null;
+    const mine = (e: SubmissionStepExecution): boolean => {
+      if (e.assignmentKind === 'USER') return e.assignedUserId != null && e.assignedUserId === me.id;
+      if (e.assignmentKind === 'ROLE') return !!e.assignedRole && me.roles.includes(e.assignedRole as Role);
+      if (e.assignmentKind === 'AREA_POSITION') return me.area === e.assignedArea && me.position === e.assignedPosition;
+      return false;
+    };
     return current.stepExecutions.find(
-      (e) =>
-        (e.status === 'PENDING' || e.status === 'IN_PROGRESS') &&
-        e.assignedUserId === me.id,
-    );
+      (e) => (e.status === 'PENDING' || e.status === 'IN_PROGRESS') && mine(e),
+    ) ?? null;
   }, [current, me]);
+
+  // Paso pendiente (aunque no sea mio) para ofrecer el atajo demo "Actuar como".
+  const pendingStep = useMemo(() => {
+    if (!current) return null;
+    return current.stepExecutions.find(
+      (e) => e.status === 'PENDING' || e.status === 'IN_PROGRESS',
+    ) ?? null;
+  }, [current]);
+
+  const switchPersona = pendingStep && !myExec ? personaForStep(pendingStep) : null;
+
+  const onSwitchPersona = async () => {
+    if (!switchPersona) return;
+    await signIn(switchPersona.username, DEMO_PASSWORD);
+  };
 
   const isOwner = !!current && !!me && current.submitterId === me.id;
   const isOpenForEdit =
@@ -168,6 +193,30 @@ export default function SubmissionDetailPage() {
                       icon={<XCircle size={14} />}>Rechazar</Button>
               <Button onClick={() => onDecide('RETURN')} disabled={saving} className="!text-warning !border-warning/30"
                       icon={<RotateCcw size={14} />}>Devolver al solicitante</Button>
+            </div>
+          </section>
+        )}
+
+        {/* Modo demo: atajo para actuar como el aprobador del paso pendiente */}
+        {switchPersona && pendingStep && (
+          <section className="ftx-card-elev p-5 print:hidden"
+                   style={{ borderLeft: '4px solid var(--ftx-info)' }}>
+            <div className="font-mono text-[10px] uppercase tracking-widest text-info mb-1">
+              modo demo
+            </div>
+            <h2 className="font-display font-bold text-base text-ink">
+              El paso <span className="text-brand">{pendingStep.stepLabel}</span> está asignado a{' '}
+              {pendingStep.assignedUserLabel
+                ?? (pendingStep.assignedRole ? pendingStep.assignedRole.replace('ROLE_', '') : 'un aprobador')}
+            </h2>
+            <p className="text-sm text-muted mt-1">
+              Para decidir este paso desde la interfaz, actúa como una persona que pueda aprobarlo.
+            </p>
+            <div className="mt-3">
+              <Button onClick={onSwitchPersona} variant="primary" disabled={saving}
+                      icon={<Repeat size={14} />}>
+                Actuar como {switchPersona.label}
+              </Button>
             </div>
           </section>
         )}
