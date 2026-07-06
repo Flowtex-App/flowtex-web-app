@@ -69,7 +69,8 @@ export default function SubmissionDetailPage() {
     ) ?? null;
   }, [current]);
 
-  const switchPersona = pendingStep && !myExec ? personaForStep(pendingStep) : null;
+  const switchPersona =
+    pendingStep && !myExec ? personaForStep(pendingStep, me?.username) : null;
 
   const onSwitchPersona = async () => {
     if (!switchPersona) return;

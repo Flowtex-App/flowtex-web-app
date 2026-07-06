@@ -44,23 +44,26 @@ export interface StepAssignmentLike {
 }
 
 /**
- * Devuelve una persona demo capaz de actuar sobre el paso asignado.
+ * Devuelve una persona demo capaz de actuar sobre el paso asignado, distinta de
+ * la persona actual (para que el botón "Actuar como" nunca te apunte a ti mismo).
  * - USER: la persona con ese id.
- * - ROLE: una persona con ese rol (prefiere una específica antes que la Demo comodín).
- * - fallback: la persona Demo (tiene todos los roles).
+ * - ROLE: una persona con ese rol.
+ * - fallback: un aprobador (rol APPROVER), nunca la persona actual si se puede evitar.
  */
-export function personaForStep(exec: StepAssignmentLike): DemoPersona | null {
-  const demo = DEMO_PERSONAS.find((p) => p.key === 'demo') ?? null;
+export function personaForStep(
+  exec: StepAssignmentLike,
+  excludeUsername?: string,
+): DemoPersona | null {
+  const pool = DEMO_PERSONAS.filter((p) => p.username !== excludeUsername);
+  const approverFallback =
+    pool.find((p) => p.roles.includes('ROLE_APPROVER')) ?? pool[0] ?? null;
+
   if (exec.assignmentKind === 'USER' && exec.assignedUserId != null) {
-    return DEMO_PERSONAS.find((p) => p.id === exec.assignedUserId) ?? demo;
+    return pool.find((p) => p.id === exec.assignedUserId) ?? approverFallback;
   }
   if (exec.assignmentKind === 'ROLE' && exec.assignedRole) {
     const role = exec.assignedRole as Role;
-    return (
-      DEMO_PERSONAS.find((p) => p.key !== 'demo' && p.roles.includes(role)) ??
-      DEMO_PERSONAS.find((p) => p.roles.includes(role)) ??
-      demo
-    );
+    return pool.find((p) => p.roles.includes(role)) ?? approverFallback;
   }
-  return demo;
+  return approverFallback;
 }

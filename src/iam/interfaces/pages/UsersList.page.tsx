@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { Search, Users as UsersIcon, Shield, X } from 'lucide-react';
 import { AppShell } from '@/shared/ui/components/AppShell';
 import { useUsersStore } from '../stores/users.store';
@@ -18,10 +19,14 @@ export default function UsersListPage() {
   const { users, loading, error, filter, setFilter, load } = useUsersStore();
   const me = useAuthStore((s) => s.user);
   const [selected, setSelected] = useState<User | null>(null);
+  const [searchParams] = useSearchParams();
 
+  // Sincroniza el filtro con el ?q= de la URL (búsqueda global del header).
   useEffect(() => {
+    const q = searchParams.get('q');
+    if (q != null) setFilter({ q });
     load();
-  }, [load]);
+  }, [searchParams, setFilter, load]);
 
   const onApplyFilter = () => load();
 
