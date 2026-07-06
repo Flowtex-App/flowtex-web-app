@@ -29,6 +29,16 @@ export const DEMO_PERSONAS: DemoPersona[] = [
   { key: 'mtongo', id: 2, label: 'Milagros Tongo',         username: 'mtongo', roles: ['ROLE_DESIGNER', 'ROLE_APPROVER'], roleLabel: 'Aprobador' },
   { key: 'mames',  id: 4, label: 'Mariano Ames',           username: 'mames',  roles: ['ROLE_USER'], roleLabel: 'Solicitante' },
   { key: 'asosa',  id: 5, label: 'Angello Sosa',           username: 'asosa',  roles: ['ROLE_USER'], roleLabel: 'Solicitante' },
+  { key: 'aquispe',  id: 7,  label: 'Ana Quispe',     username: 'aquispe',  roles: ['ROLE_APPROVER', 'ROLE_USER'], roleLabel: 'Aprobador · Finanzas' },
+  { key: 'lvargas',  id: 8,  label: 'Luis Vargas',    username: 'lvargas',  roles: ['ROLE_APPROVER'], roleLabel: 'Aprobador · Finanzas (Gerente)' },
+  { key: 'rflores',  id: 9,  label: 'Rosa Flores',    username: 'rflores',  roles: ['ROLE_APPROVER', 'ROLE_USER'], roleLabel: 'Aprobador · RR.HH.' },
+  { key: 'pramos',   id: 10, label: 'Pedro Ramos',    username: 'pramos',   roles: ['ROLE_USER'], roleLabel: 'Solicitante · Legal' },
+  { key: 'cnunez',   id: 11, label: 'Carla Nunez',    username: 'cnunez',   roles: ['ROLE_APPROVER'], roleLabel: 'Aprobador · Legal (Gerente)' },
+  { key: 'jsalazar', id: 12, label: 'Jorge Salazar',  username: 'jsalazar', roles: ['ROLE_APPROVER'], roleLabel: 'Aprobador · Operaciones' },
+  { key: 'mcastro',  id: 13, label: 'Maria Castro',   username: 'mcastro',  roles: ['ROLE_APPROVER'], roleLabel: 'Aprobador · Mercado Corp.' },
+  { key: 'dtorres',  id: 14, label: 'Diego Torres',   username: 'dtorres',  roles: ['ROLE_APPROVER', 'ROLE_DESIGNER'], roleLabel: 'Aprobador · Diseñador · Tecnología' },
+  { key: 'smendoza', id: 15, label: 'Sofia Mendoza',  username: 'smendoza', roles: ['ROLE_USER'], roleLabel: 'Solicitante · Compras' },
+  { key: 'erios',    id: 16, label: 'Elena Rios',     username: 'erios',    roles: ['ROLE_APPROVER', 'ROLE_ADMIN'], roleLabel: 'Admin · Aprobador · Auditoría' },
 ];
 
 /** Persona con la que arranca la app. `demo` tiene los 4 roles. */
