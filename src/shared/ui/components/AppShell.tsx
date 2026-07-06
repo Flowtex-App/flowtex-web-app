@@ -1,5 +1,5 @@
 import { type ReactNode, useState, useRef, useEffect } from 'react';
-import { NavLink, useNavigate, useLocation } from 'react-router-dom';
+import { NavLink, useLocation } from 'react-router-dom';
 import {
   Repeat, Inbox, FileSpreadsheet, Search, FolderKanban,
   Users, ChevronDown, ChevronRight, Menu, X, Layers,
@@ -8,8 +8,6 @@ import {
 import { useAuthStore } from '@/iam/interfaces/stores/auth.store';
 import { ThemeMenu } from '@/shared/ui/theme/ThemeMenu';
 import { DEMO_PERSONAS, DEMO_PASSWORD } from '@/iam/demo/personas';
-import { iamPorts } from '@/iam/interfaces/composition/iam-container';
-import type { User } from '@/iam/domain/models/User';
 
 interface AppShellProps {
   children: ReactNode;
@@ -268,9 +266,6 @@ export function AppShell({ children, fitViewport = false }: AppShellProps) {
             >
               <Menu size={16} />
             </button>
-
-            {/* Búsqueda global con opciones diferenciadas */}
-            <GlobalSearch />
           </div>
 
           <div className="flex items-center gap-1.5">
@@ -310,118 +305,5 @@ function UserMetaRow({ icon, label }: { icon: ReactNode; label: string }) {
       <span className="text-muted shrink-0">{icon}</span>
       <span className="truncate">{label}</span>
     </div>
-  );
-}
-
-/**
- * Búsqueda global: despliega un panel con opciones diferenciadas.
- * - Sección "Usuarios": resultados en vivo (por código o nombre).
- * - Sección "Ir a": destinos diferenciados (usuarios, formularios, solicitudes).
- */
-function GlobalSearch() {
-  const navigate = useNavigate();
-  const [q, setQ] = useState('');
-  const [open, setOpen] = useState(false);
-  const [users, setUsers] = useState<User[]>([]);
-  const [loading, setLoading] = useState(false);
-  const boxRef = useRef<HTMLDivElement | null>(null);
-
-  useEffect(() => {
-    const onClick = (e: MouseEvent) => {
-      if (boxRef.current && !boxRef.current.contains(e.target as Node)) setOpen(false);
-    };
-    document.addEventListener('mousedown', onClick);
-    return () => document.removeEventListener('mousedown', onClick);
-  }, []);
-
-  useEffect(() => {
-    if (q.trim().length < 2) { setUsers([]); return; }
-    const t = setTimeout(async () => {
-      setLoading(true);
-      try {
-        const r = await iamPorts.userRepository.list({ q });
-        setUsers(r.slice(0, 5));
-      } finally {
-        setLoading(false);
-      }
-    }, 220);
-    return () => clearTimeout(t);
-  }, [q]);
-
-  const go = (path: string) => { setOpen(false); setQ(''); navigate(path); };
-  const term = q.trim();
-  const enc = encodeURIComponent(term);
-
-  return (
-    <div ref={boxRef} className="hidden md:block relative flex-1 max-w-md">
-      <div className="relative w-full">
-        <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted" />
-        <input
-          value={q}
-          onChange={(e) => { setQ(e.target.value); setOpen(true); }}
-          onFocus={() => setOpen(true)}
-          className="ftx-input-flat w-full pl-9 text-sm py-2"
-          placeholder="Buscar usuarios, formularios, solicitudes..."
-        />
-      </div>
-      {open && (
-        <div
-          className="absolute z-50 mt-1 w-full rounded overflow-hidden shadow-lg"
-          style={{ background: 'var(--ftx-paper)', border: '1px solid var(--ftx-line-strong)' }}
-        >
-          {term.length >= 2 && (
-            <div>
-              <div className="px-3 pt-2 pb-1 text-[10px] font-mono uppercase tracking-widest text-muted">
-                usuarios
-              </div>
-              {loading && <div className="px-3 py-2 text-[11px] text-muted italic">Buscando...</div>}
-              {!loading && users.length === 0 && (
-                <div className="px-3 py-2 text-[11px] text-muted italic">Sin coincidencias</div>
-              )}
-              {users.map((u) => (
-                <button
-                  key={u.id}
-                  onClick={() => go(`/users?q=${encodeURIComponent(u.employeeCode || u.fullName)}`)}
-                  className="w-full flex items-center gap-2 px-3 py-2 text-left hover:bg-cream"
-                >
-                  <div className="size-6 rounded grid place-items-center font-display font-bold text-[9px] text-white shrink-0"
-                       style={{ background: 'var(--ftx-brand)' }}>
-                    {u.initials()}
-                  </div>
-                  <span className="min-w-0 flex-1 leading-tight">
-                    <span className="block text-[12px] text-ink truncate">{u.fullName}</span>
-                    <span className="block text-[10px] text-muted font-mono truncate">
-                      {u.employeeCode || '—'} · {u.areaLabel || '—'}
-                    </span>
-                  </span>
-                </button>
-              ))}
-            </div>
-          )}
-          <div style={{ borderTop: term.length >= 2 ? '1px solid var(--ftx-line)' : undefined }}>
-            <div className="px-3 pt-2 pb-1 text-[10px] font-mono uppercase tracking-widest text-muted">
-              ir a
-            </div>
-            <SearchGo icon={<Users size={13} />}
-                      label={term ? `Usuarios con "${term}"` : 'Usuarios'}
-                      onClick={() => go(term ? `/users?q=${enc}` : '/users')} />
-            <SearchGo icon={<FolderKanban size={13} />} label="Formularios" onClick={() => go('/forms')} />
-            <SearchGo icon={<FileSpreadsheet size={13} />} label="Solicitudes" onClick={() => go('/submissions?scope=all')} />
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
-
-function SearchGo({ icon, label, onClick }: { icon: ReactNode; label: string; onClick: () => void }) {
-  return (
-    <button
-      onClick={onClick}
-      className="w-full flex items-center gap-2 px-3 py-2 text-left text-[12px] text-ink hover:bg-cream"
-    >
-      <span className="text-muted shrink-0">{icon}</span>
-      {label}
-    </button>
   );
 }
