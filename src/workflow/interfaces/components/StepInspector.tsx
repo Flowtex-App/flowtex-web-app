@@ -6,10 +6,10 @@ import {
   DEFAULT_ROLES, SECTION_KIND_META, STEP_MODE_META, STEP_COLORS, colorMeta, newSection,
   newApproverAreaPosition,
 } from '../../domain/models/Workflow';
-import { AREAS } from '@/iam/domain/models/Area';
-import { POSITIONS } from '@/iam/domain/models/Position';
+import { AREAS, type Area } from '@/iam/domain/models/Area';
+import { POSITIONS, type Position } from '@/iam/domain/models/Position';
 import { iamPorts } from '@/iam/interfaces/composition/iam-container';
-import type { User } from '@/iam/domain/models/User';
+import type { User, Role } from '@/iam/domain/models/User';
 
 interface Props {
   step: WorkflowStep | null;
@@ -415,6 +415,7 @@ function ApproverRow({
             {POSITIONS.map((p) => <option key={p.id} value={p.id}>{p.label}</option>)}
           </select>
         </div>
+        <ApproverReach kind="AREA_POSITION" area={approver.area} position={approver.userPosition} />
       </div>
     );
   }
@@ -430,6 +431,55 @@ function ApproverRow({
           <Trash2 size={11} />
         </button>
       </div>
+      <ApproverReach kind="ROLE" role={approver.role} />
+    </div>
+  );
+}
+
+/**
+ * Indicador de alcanzabilidad: cuántos usuarios reales podrían atender un
+ * aprobador por ROL o por ÁREA+CARGO. Evita configurar un paso sin aprobador.
+ */
+function ApproverReach({
+  kind, area, position, role,
+}: {
+  kind: 'ROLE' | 'AREA_POSITION';
+  area?: string | null;
+  position?: string | null;
+  role?: string | null;
+}) {
+  const [count, setCount] = useState<number | null>(null);
+
+  useEffect(() => {
+    let alive = true;
+    (async () => {
+      try {
+        let users: User[] = [];
+        if (kind === 'AREA_POSITION') {
+          if (!area || !position) { if (alive) setCount(null); return; }
+          users = await iamPorts.userRepository.list({ area: area as Area, position: position as Position });
+        } else {
+          if (!role) { if (alive) setCount(null); return; }
+          const all = await iamPorts.userRepository.list();
+          users = all.filter((u) => u.roles.includes(role as Role));
+        }
+        if (alive) setCount(users.length);
+      } catch {
+        if (alive) setCount(null);
+      }
+    })();
+    return () => { alive = false; };
+  }, [kind, area, position, role]);
+
+  if (count === null) return null;
+  return count > 0 ? (
+    <div className="px-2.5 pb-1.5 text-[10px] text-muted flex items-center gap-1">
+      <Check size={10} className="text-success" />
+      {count} usuario{count === 1 ? '' : 's'} puede{count === 1 ? '' : 'n'} aprobar este paso
+    </div>
+  ) : (
+    <div className="px-2.5 pb-1.5 text-[10px] text-brand flex items-center gap-1">
+      <Filter size={10} /> Ningún usuario coincide: este paso quedaría sin aprobador.
     </div>
   );
 }
