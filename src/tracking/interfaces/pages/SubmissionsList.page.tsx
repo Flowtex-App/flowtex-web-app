@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { ChevronRight, Inbox } from 'lucide-react';
 import { AppShell } from '@/shared/ui/components/AppShell';
 import { useSubmissionsStore } from '../stores/submissions.store';
@@ -13,6 +13,13 @@ const SCOPE_TABS: { id: 'mine' | 'assigned' | 'all'; label: string; hint: string
 
 export default function SubmissionsListPage() {
   const { list, loading, scope, setScope, loadList } = useSubmissionsStore();
+  const [searchParams] = useSearchParams();
+
+  // Sincroniza el scope con el ?scope= de la URL (nav lateral, dashboard, etc.).
+  useEffect(() => {
+    const s = searchParams.get('scope');
+    if (s === 'mine' || s === 'assigned' || s === 'all') setScope(s);
+  }, [searchParams, setScope]);
 
   useEffect(() => { loadList(); }, [loadList, scope]);
 

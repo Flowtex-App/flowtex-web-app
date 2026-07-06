@@ -1,5 +1,5 @@
 import { type ReactNode, useState, useRef, useEffect } from 'react';
-import { NavLink, useNavigate } from 'react-router-dom';
+import { NavLink, useNavigate, useLocation } from 'react-router-dom';
 import {
   Repeat, Inbox, FileSpreadsheet, Search, FolderKanban,
   Users, ChevronDown, ChevronRight, Menu, X, Layers,
@@ -60,6 +60,7 @@ const navGroups: NavGroup[] = [
 export function AppShell({ children, fitViewport = false }: AppShellProps) {
   const { user, signIn } = useAuthStore();
   const navigate = useNavigate();
+  const location = useLocation();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [collapsedGroups, setCollapsedGroups] = useState<Record<string, boolean>>({});
   const [userMenuOpen, setUserMenuOpen] = useState(false);
@@ -145,7 +146,17 @@ export function AppShell({ children, fitViewport = false }: AppShellProps) {
                         to={item.to}
                         end={item.end}
                         onClick={() => setMobileOpen(false)}
-                        className={({ isActive }) => `ftx-nav-link ${isActive ? 'active' : ''}`}
+                        className={({ isActive }) => {
+                          // Los items de /submissions comparten pathname; el activo
+                          // depende del ?scope= para no resaltar los tres a la vez.
+                          if (item.to.startsWith('/submissions?scope=')) {
+                            const itemScope = new URLSearchParams(item.to.split('?')[1]).get('scope');
+                            const curScope = new URLSearchParams(location.search).get('scope');
+                            const on = location.pathname.startsWith('/submissions') && curScope === itemScope;
+                            return `ftx-nav-link ${on ? 'active' : ''}`;
+                          }
+                          return `ftx-nav-link ${isActive ? 'active' : ''}`;
+                        }}
                       >
                         <span className="nav-icon">{item.icon}</span>
                         <span>{item.label}</span>
@@ -263,7 +274,7 @@ export function AppShell({ children, fitViewport = false }: AppShellProps) {
                 <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted" />
                 <input
                   className="ftx-input-flat w-full pl-9 text-sm py-2"
-                  placeholder="Buscar formulario, ticket, usuario..."
+                  placeholder="Buscar usuario por código o nombre..."
                   onKeyDown={(e) => {
                     if (e.key === 'Enter') {
                       const v = (e.target as HTMLInputElement).value.trim();
