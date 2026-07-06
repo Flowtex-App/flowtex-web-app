@@ -17,6 +17,25 @@ interface Props {
 const WIDTHS: FieldWidth[] = [3, 4, 6, 8, 9, 12];
 const ROW_OPTIONS = [1, 2, 3, 4];
 
+/**
+ * Muestra las opciones "una por línea" en el editor. Si vienen guardadas como
+ * JSON (formato antiguo ["A","B"]), las convierte a líneas para que el usuario
+ * no tenga que ver ni escribir corchetes ni comillas.
+ */
+function optionsAsLines(options: string | null): string {
+  if (!options) return '';
+  const t = options.trim();
+  if (t.startsWith('[')) {
+    try {
+      const parsed = JSON.parse(t);
+      if (Array.isArray(parsed)) return parsed.map(String).join('\n');
+    } catch {
+      /* no es JSON válido: se muestra tal cual */
+    }
+  }
+  return options;
+}
+
 export function Inspector({ field, pages, pageLabels, onChange }: Props) {
   if (!field) {
     return (
@@ -260,12 +279,18 @@ export function Inspector({ field, pages, pageLabels, onChange }: Props) {
             {meta.supportsOptions && (
               <div className="ftx-inspector-row">
                 <label>Opciones</label>
-                <input
-                  value={field.options ?? ''}
-                  onChange={(e) => update({ options: e.target.value })}
-                  className="ftx-input-flat font-mono"
-                  placeholder='["A","B","C"]'
-                />
+                <div className="flex-1">
+                  <textarea
+                    value={optionsAsLines(field.options)}
+                    onChange={(e) => update({ options: e.target.value })}
+                    rows={Math.max(3, field.optionsList().length + 1)}
+                    className="ftx-input-flat resize-y"
+                    placeholder={'Una opción por línea:\nAdministrador\nAnalista\nJefe'}
+                  />
+                  <div className="text-[10px] text-muted mt-1">
+                    Una opción por línea (o separadas por coma). {field.optionsList().length} en total.
+                  </div>
+                </div>
               </div>
             )}
           </div>

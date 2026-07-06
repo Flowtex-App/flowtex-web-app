@@ -125,12 +125,19 @@ export class FormField {
 
   optionsList(): string[] {
     if (!this.options) return [];
+    const raw = this.options.trim();
+    if (!raw) return [];
+    // 1) JSON array (["A","B"]). Si es JSON pero no array, se ignora y cae al split.
     try {
-      const parsed = JSON.parse(this.options);
-      return Array.isArray(parsed) ? parsed.map(String) : [];
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed)) {
+        return parsed.map(String).map((s) => s.trim()).filter(Boolean);
+      }
     } catch {
-      return this.options.split(',').map((s) => s.trim()).filter(Boolean);
+      /* no es JSON: se separa por saltos de linea o comas */
     }
+    // 2) Texto libre: una opcion por linea o separadas por coma.
+    return raw.split(/[\n,]/).map((s) => s.trim()).filter(Boolean);
   }
 
   with(overrides: Partial<FormFieldProps & { page: PageId; rows: number }>): FormField {

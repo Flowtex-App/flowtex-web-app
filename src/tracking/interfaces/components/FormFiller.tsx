@@ -340,12 +340,16 @@ function widthClass(w: number): string {
 
 function parseOptions(raw: string | null): string[] {
   if (!raw) return [];
+  const text = raw.trim();
+  if (!text) return [];
+  // JSON array (["A","B"]); si no es array, se ignora y se separa por lineas/comas.
   try {
-    const arr = JSON.parse(raw);
-    return Array.isArray(arr) ? arr.map(String) : [];
+    const arr = JSON.parse(text);
+    if (Array.isArray(arr)) return arr.map(String).map((s) => s.trim()).filter(Boolean);
   } catch {
-    return raw.split(',').map((s) => s.trim()).filter(Boolean);
+    /* texto libre */
   }
+  return text.split(/[\n,]/).map((s) => s.trim()).filter(Boolean);
 }
 
 const PRESENTATIONAL = new Set(['HEADING', 'PARAGRAPH', 'SECTION', 'DIVIDER', 'SPACER', 'IMAGE']);
